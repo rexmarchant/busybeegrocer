@@ -32,6 +32,12 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      # GitHub Pages has no server-side router — direct hits on nested routes
+      # (refresh, typed URL, invite/magic-link emails) 404 because only
+      # index.html exists as a real file. Serving the same file as 404.html
+      # makes Pages fall back to it, and react-router picks up the path from
+      # there client-side.
+      - run: cp dist/index.html dist/404.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: app/dist
