@@ -73,7 +73,7 @@ export default function AcceptInvite() {
     if (!preview || !inviteId) return
     setError(null)
     setSubmitting(true)
-    const { error } = await requestLoginLink(preview.email, `/join/${inviteId}`)
+    const { error } = await requestLoginLink(preview.email, `join/${inviteId}`)
     setSubmitting(false)
     if (error) {
       setError(error)
