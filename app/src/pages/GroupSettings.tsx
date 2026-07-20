@@ -52,13 +52,17 @@ export default function GroupSettings() {
       .single()
     if (error || !invite) return
 
-    const link = `${window.location.origin}/join/${invite.id}`
+    const link = `${window.location.origin}${import.meta.env.BASE_URL}join/${invite.id}`
     setLastInviteLink(link)
     const subject = encodeURIComponent(`Join ${currentGroup.name} on BusyBeeGrocer`)
     const body = encodeURIComponent(
       `You've been invited to join ${currentGroup.name} on BusyBeeGrocer.\n\nTap this link to join: ${link}`,
     )
-    window.location.href = `mailto:${inviteEmail.trim()}?subject=${subject}&body=${body}`
+    // A clicked anchor is less likely to trigger a full page reload on
+    // mobile browsers than setting window.location.href directly.
+    const mailLink = document.createElement('a')
+    mailLink.href = `mailto:${inviteEmail.trim()}?subject=${subject}&body=${body}`
+    mailLink.click()
 
     setInviteEmail('')
     loadInvites()
