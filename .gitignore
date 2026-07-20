@@ -1,0 +1,6 @@
+# Claude Code local session/config data — not app source
+.claude/
+
+# OS junk
+.DS_Store
+Thumbs.db

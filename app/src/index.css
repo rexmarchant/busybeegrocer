@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+/*
+  BusyBeeGrocer design tokens — light theme only (per product decision).
+  Categorical list-color slots and status colors come from the validated
+  colorblind-safe palette; do not reuse status hues for list identity.
+*/
+@theme {
+  --color-page: #e7e5df;
+  --color-surface: #ffffff;
+  --color-border: #cfccc3;
+
+  --color-text-primary: #0b0b0b;
+  --color-text-secondary: #52514e;
+  --color-text-muted: #898781;
+
+  --color-primary: #2a78d6;
+  --color-primary-hover: #1c5cab;
+
+  /* categorical list colors — fixed order, never cycled */
+  --color-list-blue: #2a78d6;
+  --color-list-green: #008300;
+  --color-list-magenta: #e87ba4;
+  --color-list-yellow: #eda100;
+  --color-list-aqua: #1baf7a;
+  --color-list-orange: #eb6834;
+  --color-list-violet: #4a3aa7;
+  --color-list-red: #e34948;
+
+  /* reserved status colors — never used for list identity */
+  --color-status-good: #0ca30c;
+  --color-status-warning: #fab219;
+  --color-status-serious: #ec835a;
+  --color-status-critical: #d03b3b;
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+:root {
+  color-scheme: light;
+  font: 16px/1.45 var(--font-sans);
+  color: var(--color-text-primary);
+  background: var(--color-page);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+}
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
