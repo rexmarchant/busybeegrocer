@@ -41,7 +41,11 @@ export default function Settings() {
         </button>
 
         <div className="mt-10 flex flex-col items-center gap-2 pb-6 text-center">
-          <img src="/icons/icon-192.png" alt="BusyBeeGrocer" className="h-28 w-28 rounded-3xl" />
+          <img
+            src={`${import.meta.env.BASE_URL}icons/icon-192.png`}
+            alt="BusyBeeGrocer"
+            className="h-28 w-28 rounded-3xl"
+          />
           <p className="text-sm text-text-muted">
             Version {__APP_VERSION__} · {new Date(__BUILD_DATE__).toLocaleDateString()}
           </p>

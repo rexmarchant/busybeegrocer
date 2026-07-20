@@ -87,7 +87,7 @@ export default function Header() {
       <ResumeShoppingBanner />
       <header className="flex items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3">
         <Link to="/" className="flex items-center gap-2">
-          <img src="/icons/icon-192.png" alt="" className="h-11 w-11 rounded-lg" />
+          <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" className="h-11 w-11 rounded-lg" />
           <span className="font-semibold text-text-primary">BusyBeeGrocer</span>
         </Link>
 
