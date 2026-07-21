@@ -10,6 +10,7 @@ export async function addItemToList(params: {
   quantity?: number
   departmentId?: string | null
   storeId?: string | null
+  note?: string | null
 }) {
   const name = params.itemName.trim()
   if (!name) throw new Error('Item name required')
@@ -49,6 +50,7 @@ export async function addItemToList(params: {
         catalog_item_id: catalogItemId,
         quantity: params.quantity ?? 1,
         preferred_store_id: params.storeId ?? null,
+        note: params.note ?? null,
         removed_at: null,
         is_checked: false,
         added_by: params.userId,

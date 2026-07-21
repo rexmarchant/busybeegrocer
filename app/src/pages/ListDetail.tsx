@@ -28,10 +28,7 @@ export default function ListDetail() {
   const [departments, setDepartments] = useState<Department[]>([])
   const [stores, setStores] = useState<Store[]>([])
   const [sortMode, setSortMode] = useState<SortMode>('alphabetical')
-  const [newItemName, setNewItemName] = useState('')
-  const [newItemDept, setNewItemDept] = useState('')
-  const [newItemStore, setNewItemStore] = useState('')
-  const [pendingBlankConfirm, setPendingBlankConfirm] = useState(false)
+  const [showAddItem, setShowAddItem] = useState(false)
   const [infoItemId, setInfoItemId] = useState<string | null>(null)
   const [removeConfirmItem, setRemoveConfirmItem] = useState<ViewItem | null>(null)
   const [confirmAction, setConfirmAction] = useState<'delete' | 'reset' | 'checkAll' | null>(null)
@@ -147,32 +144,18 @@ export default function ListDetail() {
     [viewItems],
   )
 
-  function resetAddForm() {
-    setNewItemName('')
-    setNewItemDept('')
-    setNewItemStore('')
-    setPendingBlankConfirm(false)
-  }
-
-  async function handleAddItem(e: React.FormEvent) {
-    e.preventDefault()
-    if (!listId || !currentGroup || !user || !newItemName.trim()) return
-
-    const missingChoice = !newItemDept || !newItemStore
-    if (missingChoice && !pendingBlankConfirm) {
-      setPendingBlankConfirm(true)
-      return
-    }
-
+  async function handleAddItem(values: { name: string; departmentId: string; storeId: string; note: string }) {
+    if (!listId || !currentGroup || !user || !values.name.trim()) return
     await addItemToList({
       groupId: currentGroup.id,
       listId,
-      itemName: newItemName,
+      itemName: values.name,
       userId: user.id,
-      departmentId: newItemDept || null,
-      storeId: newItemStore || null,
+      departmentId: values.departmentId || null,
+      storeId: values.storeId || null,
+      note: values.note.trim() || null,
     })
-    resetAddForm()
+    setShowAddItem(false)
     loadAll()
   }
 
@@ -338,83 +321,31 @@ export default function ListDetail() {
       </header>
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-4">
-        {/* add item */}
-        <form onSubmit={handleAddItem} className="mb-2 flex gap-2">
-          <input
-            value={newItemName}
-            onChange={(e) => {
-              setNewItemName(e.target.value)
-              setPendingBlankConfirm(false)
-            }}
-            placeholder="Add an item…"
-            list="catalog-suggestions"
-            className="flex-1 rounded-xl border border-border bg-surface px-4 py-2.5 text-text-primary outline-none focus:border-primary"
-          />
-          <datalist id="catalog-suggestions">
-            {Object.values(catalog).map((c) => (
-              <option key={c.id} value={c.name} />
-            ))}
-          </datalist>
-          <button type="submit" className="rounded-xl bg-primary px-4 py-2.5 font-medium text-white">
-            Add
+        <button
+          onClick={() => setShowAddItem(true)}
+          className="mb-4 w-full rounded-xl bg-primary py-2.5 font-medium text-white"
+        >
+          + Add Item
+        </button>
+
+        <div className="mb-4 flex gap-2">
+          <button
+            onClick={() => setConfirmAction('checkAll')}
+            className="flex-1 rounded-xl border border-border py-2.5 text-sm text-text-secondary"
+          >
+            ✓ Check all
           </button>
-        </form>
-        <div className="mb-1 flex gap-2">
-          <select
-            value={newItemDept}
-            onChange={(e) => {
-              setNewItemDept(e.target.value)
-              setPendingBlankConfirm(false)
+          <button
+            onClick={() => {
+              const next = !showQuickList
+              setShowQuickList(next)
+              if (next) loadQuickList()
             }}
-            className="flex-1 rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-secondary outline-none focus:border-primary"
+            className="flex-1 rounded-xl border border-border py-2.5 text-sm text-text-secondary"
           >
-            <option value="">No Category</option>
-            {departments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={newItemStore}
-            onChange={(e) => {
-              setNewItemStore(e.target.value)
-              setPendingBlankConfirm(false)
-            }}
-            className="flex-1 rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-secondary outline-none focus:border-primary"
-          >
-            <option value="">No Store</option>
-            {stores.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+            {showQuickList ? 'Hide' : '⚡'} Quick List
+          </button>
         </div>
-        {pendingBlankConfirm && (
-          <p className="mb-4 text-xs text-status-warning">
-            No category and/or store selected — tap Add again to add it as "No Category" / "No Store" anyway.
-          </p>
-        )}
-        {!pendingBlankConfirm && <div className="mb-4" />}
-
-        <button
-          onClick={() => setConfirmAction('checkAll')}
-          className="mb-4 w-full rounded-xl border border-border py-2.5 text-sm text-text-secondary"
-        >
-          ✓ Check all items
-        </button>
-
-        <button
-          onClick={() => {
-            const next = !showQuickList
-            setShowQuickList(next)
-            if (next) loadQuickList()
-          }}
-          className="mb-4 w-full rounded-xl border border-border py-2.5 text-sm text-text-secondary"
-        >
-          {showQuickList ? 'Hide' : '⚡ Show'} Quick List (most bought)
-        </button>
 
         {showQuickList && (
           <ul className="mb-4 flex flex-col gap-1.5">
@@ -552,6 +483,16 @@ export default function ListDetail() {
           </ul>
         )}
       </main>
+
+      {showAddItem && (
+        <AddItemModal
+          catalogNames={Object.values(catalog).map((c) => c.name)}
+          departments={departments}
+          stores={stores}
+          onClose={() => setShowAddItem(false)}
+          onAdd={handleAddItem}
+        />
+      )}
 
       {infoItem && (
         <ItemInfoModal
@@ -711,6 +652,136 @@ function ItemRow({
         ✕
       </button>
     </li>
+  )
+}
+
+function AddItemModal({
+  catalogNames,
+  departments,
+  stores,
+  onClose,
+  onAdd,
+}: {
+  catalogNames: string[]
+  departments: Department[]
+  stores: Store[]
+  onClose: () => void
+  onAdd: (values: { name: string; departmentId: string; storeId: string; note: string }) => void
+}) {
+  const [name, setName] = useState('')
+  const [departmentId, setDepartmentId] = useState('')
+  const [storeId, setStoreId] = useState('')
+  const [note, setNote] = useState('')
+  const [pendingBlankConfirm, setPendingBlankConfirm] = useState(false)
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!name.trim()) return
+    const missingChoice = !departmentId || !storeId
+    if (missingChoice && !pendingBlankConfirm) {
+      setPendingBlankConfirm(true)
+      return
+    }
+    onAdd({ name, departmentId, storeId, note })
+  }
+
+  return (
+    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/30 px-6">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-sm rounded-2xl bg-surface p-6"
+      >
+        <h3 className="mb-3 text-lg font-semibold text-text-primary">Add item</h3>
+        <label className="mb-3 flex flex-col gap-1.5 text-sm text-text-secondary">
+          Name
+          <input
+            autoFocus
+            required
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value)
+              setPendingBlankConfirm(false)
+            }}
+            placeholder="e.g. Milk"
+            list="catalog-suggestions"
+            className="rounded-xl border border-border bg-page px-3 py-2 text-text-primary outline-none focus:border-primary"
+          />
+          <datalist id="catalog-suggestions">
+            {catalogNames.map((n) => (
+              <option key={n} value={n} />
+            ))}
+          </datalist>
+        </label>
+
+        <div className="mb-3 flex gap-2">
+          <label className="flex flex-1 flex-col gap-1.5 text-sm text-text-secondary">
+            Category
+            <select
+              value={departmentId}
+              onChange={(e) => {
+                setDepartmentId(e.target.value)
+                setPendingBlankConfirm(false)
+              }}
+              className="rounded-xl border border-border bg-page px-3 py-2 text-text-primary outline-none focus:border-primary"
+            >
+              <option value="">No Category</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-1 flex-col gap-1.5 text-sm text-text-secondary">
+            Store
+            <select
+              value={storeId}
+              onChange={(e) => {
+                setStoreId(e.target.value)
+                setPendingBlankConfirm(false)
+              }}
+              className="rounded-xl border border-border bg-page px-3 py-2 text-text-primary outline-none focus:border-primary"
+            >
+              <option value="">No Store</option>
+              {stores.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <label className="mb-4 flex flex-col gap-1.5 text-sm text-text-secondary">
+          Note (optional)
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={2}
+            className="rounded-xl border border-border bg-page px-3 py-2 text-text-primary outline-none focus:border-primary"
+          />
+        </label>
+
+        {pendingBlankConfirm && (
+          <p className="mb-3 text-xs text-status-warning">
+            No category and/or store selected — tap Add again to add it as "No Category" / "No Store" anyway.
+          </p>
+        )}
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-xl border border-border py-2.5 text-text-secondary"
+          >
+            Cancel
+          </button>
+          <button type="submit" className="flex-1 rounded-xl bg-primary py-2.5 font-medium text-white">
+            Add
+          </button>
+        </div>
+      </form>
+    </div>
   )
 }
 
