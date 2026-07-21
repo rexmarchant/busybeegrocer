@@ -144,7 +144,13 @@ export default function ListDetail() {
     [viewItems],
   )
 
-  async function handleAddItem(values: { name: string; departmentId: string; storeId: string; note: string }) {
+  async function handleAddItem(values: {
+    name: string
+    departmentId: string
+    storeId: string
+    note: string
+    quantity: number
+  }) {
     if (!listId || !currentGroup || !user || !values.name.trim()) return
     await addItemToList({
       groupId: currentGroup.id,
@@ -154,6 +160,7 @@ export default function ListDetail() {
       departmentId: values.departmentId || null,
       storeId: values.storeId || null,
       note: values.note.trim() || null,
+      quantity: values.quantity,
     })
     setShowAddItem(false)
     loadAll()
@@ -502,7 +509,7 @@ export default function ListDetail() {
           departments={departments}
           stores={stores}
           onClose={() => setInfoItemId(null)}
-          onSave={async ({ name, note, departmentId, storeId }) => {
+          onSave={async ({ name, note, departmentId, storeId, quantity }) => {
             await supabase
               .from('catalog_items')
               .update({ name, department_id: departmentId || null })
@@ -512,6 +519,7 @@ export default function ListDetail() {
               .update({
                 note,
                 preferred_store_id: storeId || null,
+                quantity,
                 last_modified_by: user?.id,
                 last_modified_at: new Date().toISOString(),
               })
@@ -628,7 +636,7 @@ function ItemRow({
       <div className="flex-1">
         <span className={item.is_checked ? 'text-text-muted line-through' : 'text-text-primary'}>
           {item.name}
-          {item.quantity > 1 && ` (${item.quantity})`}
+          {item.quantity > 1 && <span className="text-text-secondary"> — Qty: {item.quantity}</span>}
         </span>{' '}
         <span className="text-xs text-text-muted">
           ({item.checked_count}/{item.unchecked_count})
@@ -666,9 +674,16 @@ function AddItemModal({
   departments: Department[]
   stores: Store[]
   onClose: () => void
-  onAdd: (values: { name: string; departmentId: string; storeId: string; note: string }) => void
+  onAdd: (values: {
+    name: string
+    departmentId: string
+    storeId: string
+    note: string
+    quantity: number
+  }) => void
 }) {
   const [name, setName] = useState('')
+  const [quantity, setQuantity] = useState(1)
   const [departmentId, setDepartmentId] = useState('')
   const [storeId, setStoreId] = useState('')
   const [note, setNote] = useState('')
@@ -682,7 +697,7 @@ function AddItemModal({
       setPendingBlankConfirm(true)
       return
     }
-    onAdd({ name, departmentId, storeId, note })
+    onAdd({ name, departmentId, storeId, note, quantity: quantity || 1 })
   }
 
   return (
@@ -692,26 +707,38 @@ function AddItemModal({
         className="w-full max-w-sm rounded-2xl bg-surface p-6"
       >
         <h3 className="mb-3 text-lg font-semibold text-text-primary">Add item</h3>
-        <label className="mb-3 flex flex-col gap-1.5 text-sm text-text-secondary">
-          Name
-          <input
-            autoFocus
-            required
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value)
-              setPendingBlankConfirm(false)
-            }}
-            placeholder="e.g. Milk"
-            list="catalog-suggestions"
-            className="rounded-xl border border-border bg-page px-3 py-2 text-text-primary outline-none focus:border-primary"
-          />
-          <datalist id="catalog-suggestions">
-            {catalogNames.map((n) => (
-              <option key={n} value={n} />
-            ))}
-          </datalist>
-        </label>
+        <div className="mb-3 flex gap-2">
+          <label className="flex flex-1 flex-col gap-1.5 text-sm text-text-secondary">
+            Name
+            <input
+              autoFocus
+              required
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value)
+                setPendingBlankConfirm(false)
+              }}
+              placeholder="e.g. Milk"
+              list="catalog-suggestions"
+              className="rounded-xl border border-border bg-page px-3 py-2 text-text-primary outline-none focus:border-primary"
+            />
+            <datalist id="catalog-suggestions">
+              {catalogNames.map((n) => (
+                <option key={n} value={n} />
+              ))}
+            </datalist>
+          </label>
+          <label className="flex w-20 flex-col gap-1.5 text-sm text-text-secondary">
+            Qty
+            <input
+              type="number"
+              min={1}
+              value={quantity}
+              onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
+              className="rounded-xl border border-border bg-page px-3 py-2 text-text-primary outline-none focus:border-primary"
+            />
+          </label>
+        </div>
 
         <div className="mb-3 flex gap-2">
           <label className="flex flex-1 flex-col gap-1.5 text-sm text-text-secondary">
@@ -800,9 +827,16 @@ function ItemInfoModal({
   departments: Department[]
   stores: Store[]
   onClose: () => void
-  onSave: (values: { name: string; note: string; departmentId: string; storeId: string }) => void
+  onSave: (values: {
+    name: string
+    note: string
+    departmentId: string
+    storeId: string
+    quantity: number
+  }) => void
 }) {
   const [name, setName] = useState(item.name)
+  const [quantity, setQuantity] = useState(item.quantity)
   const [note, setNote] = useState(item.note ?? '')
   const [departmentId, setDepartmentId] = useState('')
   const [storeId, setStoreId] = useState(item.preferred_store_id ?? '')
@@ -817,14 +851,26 @@ function ItemInfoModal({
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/30 px-6">
       <div className="w-full max-w-sm rounded-2xl bg-surface p-6">
-        <label className="mb-3 flex flex-col gap-1.5 text-sm text-text-secondary">
-          Name
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="rounded-xl border border-border bg-page px-3 py-2 text-text-primary outline-none focus:border-primary"
-          />
-        </label>
+        <div className="mb-3 flex gap-2">
+          <label className="flex flex-1 flex-col gap-1.5 text-sm text-text-secondary">
+            Name
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="rounded-xl border border-border bg-page px-3 py-2 text-text-primary outline-none focus:border-primary"
+            />
+          </label>
+          <label className="flex w-20 flex-col gap-1.5 text-sm text-text-secondary">
+            Qty
+            <input
+              type="number"
+              min={1}
+              value={quantity}
+              onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
+              className="rounded-xl border border-border bg-page px-3 py-2 text-text-primary outline-none focus:border-primary"
+            />
+          </label>
+        </div>
         <div className="mb-3 flex gap-2">
           <label className="flex flex-1 flex-col gap-1.5 text-sm text-text-secondary">
             Category
@@ -882,7 +928,7 @@ function ItemInfoModal({
             Close
           </button>
           <button
-            onClick={() => onSave({ name: name.trim(), note, departmentId, storeId })}
+            onClick={() => onSave({ name: name.trim(), note, departmentId, storeId, quantity })}
             className="flex-1 rounded-xl bg-primary py-2.5 font-medium text-white"
           >
             Save

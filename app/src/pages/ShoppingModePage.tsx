@@ -271,7 +271,9 @@ export default function ShoppingModePage() {
                   <span className="flex-1">
                     <span className="block text-text-primary">
                       {block.item.name}
-                      {block.item.quantity > 1 && ` (${block.item.quantity})`}
+                      {block.item.quantity > 1 && (
+                        <span className="text-text-secondary"> — Qty: {block.item.quantity}</span>
+                      )}
                     </span>
                     {block.item.note?.trim() && (
                       <span className="mt-0.5 block text-sm text-text-secondary">{block.item.note}</span>
@@ -356,7 +358,7 @@ function CongratsScreen({
   })
 
   function sendList() {
-    const body = items.map((i) => `- ${i.name}${i.quantity > 1 ? ` (${i.quantity})` : ''}`).join('\n')
+    const body = items.map((i) => `- ${i.name}${i.quantity > 1 ? ` — Qty: ${i.quantity}` : ''}`).join('\n')
     const subject = encodeURIComponent(`${list.name} — shopping list`)
     // A clicked anchor is less likely to trigger a full page reload on
     // mobile browsers than setting window.location.href directly — that
