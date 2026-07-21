@@ -12,6 +12,8 @@ import ConfirmModal from '../components/ConfirmModal'
 import IconPicker from '../components/IconPicker'
 import type { CatalogItem, Department, ListIcon, ListItem, ShoppingList, Store } from '../types/database'
 
+const NO_STORE_FILTER_KEY = '__no_store__'
+
 export default function ListDetail() {
   const { listId } = useParams<{ listId: string }>()
   const { user } = useAuth()
@@ -35,11 +37,13 @@ export default function ListDetail() {
   const [confirmAction, setConfirmAction] = useState<'delete' | 'reset' | 'checkAll' | null>(null)
   const [renaming, setRenaming] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
-  const [showShared, setShowShared] = useState(false)
+  const [showListSettings, setShowListSettings] = useState(false)
   const [showIconPicker, setShowIconPicker] = useState(false)
   const [showQuickList, setShowQuickList] = useState(false)
   const [quickListItems, setQuickListItems] = useState<(ListItem & { name: string })[]>([])
   const [showNotes, setShowNotes] = useState(false)
+  const [showStoreFilter, setShowStoreFilter] = useState(false)
+  const [storeFilterIds, setStoreFilterIds] = useState<Set<string> | null>(null)
 
   const isOwner = list?.owner_id === user?.id
   const isResuming = activeSession?.listId === listId
@@ -110,10 +114,29 @@ export default function ListDetail() {
     return m
   }, [stores])
 
+  const filteredItems = useMemo(() => {
+    if (!storeFilterIds) return items
+    return items.filter((item) => {
+      const storeId = item.preferred_store_id ?? catalog[item.catalog_item_id]?.default_store_id ?? null
+      return storeFilterIds.has(storeId ?? NO_STORE_FILTER_KEY)
+    })
+  }, [items, catalog, storeFilterIds])
+
   const viewItems: ViewItem[] = useMemo(
-    () => toViewItems(items, catalog, departmentMap, storeMap),
-    [items, catalog, departmentMap, storeMap],
+    () => toViewItems(filteredItems, catalog, departmentMap, storeMap),
+    [filteredItems, catalog, departmentMap, storeMap],
   )
+
+  function toggleStoreFilter(key: string) {
+    setStoreFilterIds((prev) => {
+      const allKeys = [...stores.map((s) => s.id), NO_STORE_FILTER_KEY]
+      const base = prev ?? new Set(allKeys)
+      const next = new Set(base)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next.size === allKeys.length ? null : next
+    })
+  }
 
   const uncheckedCount = useMemo(() => viewItems.filter((i) => !i.is_checked).length, [viewItems])
 
@@ -298,6 +321,13 @@ export default function ListDetail() {
             {uncheckedCount} item{uncheckedCount === 1 ? '' : 's'}
           </span>
           <button
+            onClick={() => setShowListSettings(true)}
+            aria-label="List settings"
+            className="text-xl text-text-secondary"
+          >
+            ⚙️
+          </button>
+          <button
             onClick={() => navigate(`/lists/${list.id}/shop`)}
             className="rounded-full px-4 py-2 text-sm font-medium text-white"
             style={{ backgroundColor: color }}
@@ -308,39 +338,6 @@ export default function ListDetail() {
       </header>
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-4">
-        {/* owner tools */}
-        <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
-          <button onClick={() => setShowShared(true)} className="text-text-secondary underline">
-            Shared with {list.is_private ? 'only you' : `${members.length} group member(s)`}
-          </button>
-          {isOwner && (
-            <>
-              <span className="text-text-muted">·</span>
-              <button onClick={handleTogglePrivate} className="text-text-secondary underline">
-                Make {list.is_private ? 'shared' : 'private'}
-              </button>
-              <span className="text-text-muted">·</span>
-              <button onClick={handleDuplicate} className="text-text-secondary underline">
-                Duplicate
-              </button>
-              <span className="text-text-muted">·</span>
-              <button
-                onClick={() => setConfirmAction('reset')}
-                className="text-text-secondary underline"
-              >
-                Reset counts
-              </button>
-              <span className="text-text-muted">·</span>
-              <button
-                onClick={() => setConfirmAction('delete')}
-                className="text-status-critical underline"
-              >
-                Delete list
-              </button>
-            </>
-          )}
-        </div>
-
         {/* add item */}
         <form onSubmit={handleAddItem} className="mb-2 flex gap-2">
           <input
@@ -468,7 +465,43 @@ export default function ListDetail() {
           >
             📝 Notes
           </button>
+          <button
+            onClick={() => setShowStoreFilter((v) => !v)}
+            className={`rounded-full px-3 py-1.5 ${
+              storeFilterIds ? 'bg-primary text-white' : 'bg-surface text-text-secondary'
+            }`}
+          >
+            🔎 Filter{storeFilterIds ? ` (${storeFilterIds.size})` : ''}
+          </button>
         </div>
+
+        {showStoreFilter && (
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-3">
+            {stores.map((s) => (
+              <label key={s.id} className="flex items-center gap-1.5 text-sm text-text-secondary">
+                <input
+                  type="checkbox"
+                  checked={!storeFilterIds || storeFilterIds.has(s.id)}
+                  onChange={() => toggleStoreFilter(s.id)}
+                />
+                {s.name}
+              </label>
+            ))}
+            <label className="flex items-center gap-1.5 text-sm text-text-secondary">
+              <input
+                type="checkbox"
+                checked={!storeFilterIds || storeFilterIds.has(NO_STORE_FILTER_KEY)}
+                onChange={() => toggleStoreFilter(NO_STORE_FILTER_KEY)}
+              />
+              No Preferred Store
+            </label>
+            {storeFilterIds && (
+              <button onClick={() => setStoreFilterIds(null)} className="text-sm text-primary underline">
+                Show all stores
+              </button>
+            )}
+          </div>
+        )}
 
         {showNotes ? (
           <ul className="flex flex-col gap-1.5">
@@ -495,8 +528,8 @@ export default function ListDetail() {
                   key={`h-${idx}`}
                   className={
                     block.level === 1
-                      ? 'mt-4 px-1 text-xs font-semibold uppercase tracking-wide text-text-muted first:mt-0'
-                      : 'mt-1 pl-3 text-xs font-medium text-text-muted'
+                      ? 'mt-4 rounded-lg bg-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-text-primary first:mt-0'
+                      : 'mt-1.5 ml-3 rounded-md bg-border/60 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-text-secondary'
                   }
                 >
                   {block.label}
@@ -548,8 +581,23 @@ export default function ListDetail() {
         />
       )}
 
-      {showShared && (
-        <SharedWithModal members={members} isPrivate={list.is_private} onClose={() => setShowShared(false)} />
+      {showListSettings && (
+        <ListSettingsModal
+          list={list}
+          isOwner={isOwner}
+          members={members}
+          onClose={() => setShowListSettings(false)}
+          onTogglePrivate={handleTogglePrivate}
+          onDuplicate={handleDuplicate}
+          onResetCounts={() => {
+            setShowListSettings(false)
+            setConfirmAction('reset')
+          }}
+          onDelete={() => {
+            setShowListSettings(false)
+            setConfirmAction('delete')
+          }}
+        />
       )}
 
       {showIconPicker && (
@@ -774,28 +822,58 @@ function ItemInfoModal({
   )
 }
 
-function SharedWithModal({
+function ListSettingsModal({
+  list,
+  isOwner,
   members,
-  isPrivate,
   onClose,
+  onTogglePrivate,
+  onDuplicate,
+  onResetCounts,
+  onDelete,
 }: {
+  list: ShoppingList
+  isOwner: boolean
   members: ReturnType<typeof useGroupMembers>['members']
-  isPrivate: boolean
   onClose: () => void
+  onTogglePrivate: () => void
+  onDuplicate: () => void
+  onResetCounts: () => void
+  onDelete: () => void
 }) {
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/30 px-6">
       <div className="w-full max-w-sm rounded-2xl bg-surface p-6">
-        <h3 className="mb-3 text-lg font-semibold text-text-primary">Shared with</h3>
-        {isPrivate ? (
-          <p className="text-sm text-text-secondary">This list is private — only you can see it.</p>
+        <h3 className="mb-3 text-lg font-semibold text-text-primary">List settings</h3>
+
+        <p className="mb-1.5 text-sm font-medium text-text-secondary">Shared with</p>
+        {list.is_private ? (
+          <p className="mb-4 text-sm text-text-secondary">This list is private — only you can see it.</p>
         ) : (
-          <ul className="mb-4 flex flex-col gap-1.5 text-sm text-text-primary">
+          <ul className="mb-4 flex flex-col gap-1 text-sm text-text-primary">
             {members.map((m) => (
               <li key={m.id}>{m.display_name || m.email}</li>
             ))}
           </ul>
         )}
+
+        {isOwner && (
+          <div className="mb-4 flex flex-col divide-y divide-border overflow-hidden rounded-xl border border-border">
+            <button onClick={onTogglePrivate} className="px-4 py-3 text-left text-text-primary">
+              Make {list.is_private ? 'shared' : 'private'}
+            </button>
+            <button onClick={onDuplicate} className="px-4 py-3 text-left text-text-primary">
+              Duplicate list
+            </button>
+            <button onClick={onResetCounts} className="px-4 py-3 text-left text-text-primary">
+              Reset counts
+            </button>
+            <button onClick={onDelete} className="px-4 py-3 text-left text-status-critical">
+              Delete list
+            </button>
+          </div>
+        )}
+
         <button onClick={onClose} className="w-full rounded-xl border border-border py-2.5 text-text-secondary">
           Close
         </button>
