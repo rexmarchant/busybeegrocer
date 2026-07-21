@@ -63,8 +63,14 @@ export default function AcceptInvite() {
   }
 
   useEffect(() => {
-    if (session && preview && preview.status === 'pending') {
+    if (!session || !preview) return
+    if (preview.status === 'pending') {
       acceptInvite()
+    } else if (preview.status === 'accepted') {
+      // Already joined earlier (e.g. revisiting the link, or a second email
+      // from the same invite) — nothing to do, just go into the app instead
+      // of hanging on "Joining…" forever.
+      navigate('/', { replace: true })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, preview])
