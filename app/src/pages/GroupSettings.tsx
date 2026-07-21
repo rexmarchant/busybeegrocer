@@ -68,6 +68,11 @@ export default function GroupSettings() {
     loadInvites()
   }
 
+  async function handleRevokeInvite(inviteId: string) {
+    await supabase.from('invites').update({ status: 'revoked' }).eq('id', inviteId)
+    loadInvites()
+  }
+
   async function handleLeaveGroup() {
     if (!currentGroup || !user) return
     await supabase
@@ -160,8 +165,14 @@ export default function GroupSettings() {
               <h2 className="mb-2 text-sm font-medium text-text-secondary">Pending invites</h2>
               <ul className="mb-6 flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
                 {pendingInvites.map((inv) => (
-                  <li key={inv.id} className="px-4 py-3 text-text-primary">
-                    {inv.email}
+                  <li key={inv.id} className="flex items-center justify-between px-4 py-3">
+                    <span className="text-text-primary">{inv.email}</span>
+                    <button
+                      onClick={() => handleRevokeInvite(inv.id)}
+                      className="text-sm text-status-critical underline"
+                    >
+                      Revoke
+                    </button>
                   </li>
                 ))}
               </ul>
