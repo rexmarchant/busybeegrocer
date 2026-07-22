@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useGroup } from '../contexts/GroupContext'
 import { useShoppingSession } from '../contexts/ShoppingSessionContext'
 import { listColorHex, listIconEmoji } from '../lib/constants'
-import { buildBlocks, sortByName, toViewItems, type SortMode, type ViewItem } from '../lib/itemGrouping'
+import { buildBlocks, isBlockCollapsed, sortByName, toViewItems, type SortMode, type ViewItem } from '../lib/itemGrouping'
 import type { CatalogItem, Department, ListItem, ShoppingList, Store } from '../types/database'
 
 const SHOP_SORT_LABELS: Record<Exclude<SortMode, 'favorites'>, string> = {
@@ -30,6 +30,7 @@ export default function ShoppingModePage() {
   const [departments, setDepartments] = useState<Department[]>([])
   const [stores, setStores] = useState<Store[]>([])
   const [sortMode, setSortMode] = useState<Exclude<SortMode, 'favorites'>>('alphabetical')
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
   const [elapsed, setElapsed] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
   const [ended, setEnded] = useState<{
@@ -135,6 +136,15 @@ export default function ShoppingModePage() {
     }
   }
 
+  function toggleSection(key: string) {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
   async function handleRefresh() {
     setRefreshing(true)
     await loadItems()
@@ -186,7 +196,14 @@ export default function ShoppingModePage() {
     [items, catalog, departmentMap, storeMap],
   )
   const remaining = useMemo(() => viewItems.filter((i) => !i.is_checked), [viewItems])
-  const inCart = useMemo(() => sortByName(viewItems.filter((i) => i.is_checked)), [viewItems])
+  // "In cart" is scoped to this shopping trip only — items checked off elsewhere
+  // (or already checked before the trip started) aren't part of what we're
+  // shopping for right now, so they shouldn't clutter this list.
+  const inCart = useMemo(
+    () => sortByName(viewItems.filter((i) => i.is_checked && sessionItemIdsRef.current.has(i.id))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [viewItems],
+  )
   const remainingBlocks = useMemo(() => buildBlocks(remaining, sortMode), [remaining, sortMode])
 
   if (!list) return <div className="p-6 text-text-secondary">Starting shopping mode…</div>
@@ -249,19 +266,28 @@ export default function ShoppingModePage() {
         </div>
 
         <ul className="mb-6 flex flex-col gap-1.5">
-          {remainingBlocks.map((block, idx) =>
-            block.type === 'header' ? (
-              <li
-                key={`h-${idx}`}
-                className={
-                  block.level === 1
-                    ? 'mt-4 px-1 text-xs font-semibold uppercase tracking-wide text-text-muted first:mt-0'
-                    : 'mt-1 pl-3 text-xs font-medium text-text-muted'
-                }
-              >
-                {block.label}
-              </li>
-            ) : (
+          {remainingBlocks.map((block, idx) => {
+            if (isBlockCollapsed(block, collapsedSections)) return null
+            if (block.type === 'header') {
+              const isCollapsed = collapsedSections.has(block.sectionKey)
+              return (
+                <li key={`h-${idx}`}>
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(block.sectionKey)}
+                    className={
+                      block.level === 1
+                        ? 'mt-4 flex w-full items-center justify-between rounded-lg bg-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-text-primary first:mt-0'
+                        : 'mt-1.5 ml-3 flex w-[calc(100%-0.75rem)] items-center justify-between rounded-md bg-border/60 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-text-secondary'
+                    }
+                  >
+                    <span>{block.label}</span>
+                    <span className="text-text-muted">{isCollapsed ? '▸' : '▾'}</span>
+                  </button>
+                </li>
+              )
+            }
+            return (
               <li key={block.item.id}>
                 <button
                   onClick={() => toggle(block.item)}
@@ -281,8 +307,8 @@ export default function ShoppingModePage() {
                   </span>
                 </button>
               </li>
-            ),
-          )}
+            )
+          })}
           {remaining.length === 0 && items.length > 0 && (
             <p className="py-4 text-center text-text-secondary">Everything's in the cart!</p>
           )}

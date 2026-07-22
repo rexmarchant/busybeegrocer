@@ -50,7 +50,7 @@ export default function Settings() {
             className="h-28 w-28 rounded-3xl"
           />
           <p className="text-sm text-text-muted">
-            Version {__APP_VERSION__} · {new Date(__BUILD_DATE__).toLocaleDateString()}
+            Version {__APP_VERSION__} (build {__BUILD_NUMBER__}) · {new Date(__BUILD_DATE__).toLocaleDateString()}
           </p>
         </div>
       </main>

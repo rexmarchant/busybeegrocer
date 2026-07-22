@@ -18,6 +18,9 @@ export default defineConfig(({ command }) => {
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),
       __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
+      // Set by CI from the commit count, so it increments on every deploy
+      // without anyone having to remember to bump package.json by hand.
+      __BUILD_NUMBER__: JSON.stringify(process.env.VITE_BUILD_NUMBER ?? 'dev'),
     },
     plugins: [
       react(),

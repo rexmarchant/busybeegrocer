@@ -7,7 +7,7 @@ import { useShoppingSession } from '../contexts/ShoppingSessionContext'
 import { useGroupMembers, profileLabel } from '../lib/hooks'
 import { addItemToList, removeItemFromList } from '../lib/listActions'
 import { listColorHex, listIconEmoji } from '../lib/constants'
-import { SORT_LABELS, buildBlocks, toViewItems, type SortMode, type ViewItem } from '../lib/itemGrouping'
+import { SORT_LABELS, buildBlocks, isBlockCollapsed, toViewItems, type SortMode, type ViewItem } from '../lib/itemGrouping'
 import ConfirmModal from '../components/ConfirmModal'
 import IconPicker from '../components/IconPicker'
 import type { CatalogItem, Department, ListIcon, ListItem, ShoppingList, Store } from '../types/database'
@@ -41,6 +41,7 @@ export default function ListDetail() {
   const [showNotes, setShowNotes] = useState(false)
   const [showStoreFilter, setShowStoreFilter] = useState(false)
   const [storeFilterIds, setStoreFilterIds] = useState<Set<string> | null>(null)
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
 
   const isOwner = list?.owner_id === user?.id
   const isResuming = activeSession?.listId === listId
@@ -123,6 +124,15 @@ export default function ListDetail() {
     () => toViewItems(filteredItems, catalog, departmentMap, storeMap),
     [filteredItems, catalog, departmentMap, storeMap],
   )
+
+  function toggleSection(key: string) {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
 
   function toggleStoreFilter(key: string) {
     setStoreFilterIds((prev) => {
@@ -460,19 +470,28 @@ export default function ListDetail() {
           </ul>
         ) : (
           <ul className="flex flex-col gap-1.5">
-            {blocks.map((block, idx) =>
-              block.type === 'header' ? (
-                <li
-                  key={`h-${idx}`}
-                  className={
-                    block.level === 1
-                      ? 'mt-4 rounded-lg bg-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-text-primary first:mt-0'
-                      : 'mt-1.5 ml-3 rounded-md bg-border/60 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-text-secondary'
-                  }
-                >
-                  {block.label}
-                </li>
-              ) : (
+            {blocks.map((block, idx) => {
+              if (isBlockCollapsed(block, collapsedSections)) return null
+              if (block.type === 'header') {
+                const isCollapsed = collapsedSections.has(block.sectionKey)
+                return (
+                  <li key={`h-${idx}`}>
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(block.sectionKey)}
+                      className={
+                        block.level === 1
+                          ? 'mt-4 flex w-full items-center justify-between rounded-lg bg-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-text-primary first:mt-0'
+                          : 'mt-1.5 ml-3 flex w-[calc(100%-0.75rem)] items-center justify-between rounded-md bg-border/60 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-text-secondary'
+                      }
+                    >
+                      <span>{block.label}</span>
+                      <span className="text-text-muted">{isCollapsed ? '▸' : '▾'}</span>
+                    </button>
+                  </li>
+                )
+              }
+              return (
                 <ItemRow
                   key={block.item.id}
                   item={block.item}
@@ -482,8 +501,8 @@ export default function ListDetail() {
                   onInfo={() => setInfoItemId(block.item.id)}
                   onRemove={() => setRemoveConfirmItem(block.item)}
                 />
-              ),
-            )}
+              )
+            })}
             {blocks.length === 0 && (
               <p className="py-8 text-center text-text-secondary">No items yet — add your first one above.</p>
             )}
@@ -839,7 +858,7 @@ function ItemInfoModal({
   const [quantity, setQuantity] = useState(item.quantity)
   const [note, setNote] = useState(item.note ?? '')
   const [departmentId, setDepartmentId] = useState('')
-  const [storeId, setStoreId] = useState(item.preferred_store_id ?? '')
+  const [storeId, setStoreId] = useState(item.resolvedStoreId ?? '')
 
   useEffect(() => {
     // department_id isn't on ViewItem directly; derive it from the departments list by matching name

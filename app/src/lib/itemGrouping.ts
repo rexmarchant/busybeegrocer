@@ -18,11 +18,20 @@ export interface ViewItem extends ListItem {
   departmentName: string
   departmentSort: number
   storeName: string
+  resolvedStoreId: string | null
 }
 
 export type Block<T extends ViewItem = ViewItem> =
-  | { type: 'header'; level: 1 | 2; label: string }
-  | { type: 'item'; item: T }
+  | { type: 'header'; level: 1 | 2; label: string; sectionKey: string; parentKey?: string }
+  | { type: 'item'; item: T; sectionKey: string; parentKey?: string }
+
+/** Given the currently-collapsed section keys, is this block hidden? A block is hidden
+ * if its own section is collapsed, or (for level-2 headers/items) its parent section is. */
+export function isBlockCollapsed(block: Block, collapsedKeys: Set<string>): boolean {
+  if (block.parentKey && collapsedKeys.has(block.parentKey)) return true
+  if (block.type === 'item' && collapsedKeys.has(block.sectionKey)) return true
+  return false
+}
 
 export function sortByName<T extends ViewItem>(items: T[]): T[] {
   return [...items].sort((a, b) => a.name.localeCompare(b.name))
@@ -38,8 +47,9 @@ export function buildCategoryBlocks<T extends ViewItem>(items: T[]): Block<T>[] 
   const ordered = [...groups.entries()].sort((a, b) => a[1].sortOrder - b[1].sortOrder)
   const blocks: Block<T>[] = []
   for (const [label, group] of ordered) {
-    blocks.push({ type: 'header', level: 1, label })
-    for (const item of sortByName(group.items)) blocks.push({ type: 'item', item })
+    const sectionKey = `cat:${label}`
+    blocks.push({ type: 'header', level: 1, label, sectionKey })
+    for (const item of sortByName(group.items)) blocks.push({ type: 'item', item, sectionKey })
   }
   return blocks
 }
@@ -58,8 +68,9 @@ export function buildStoreBlocks<T extends ViewItem>(items: T[]): Block<T>[] {
   })
   const blocks: Block<T>[] = []
   for (const [label, groupItems] of ordered) {
-    blocks.push({ type: 'header', level: 1, label })
-    for (const item of sortByName(groupItems)) blocks.push({ type: 'item', item })
+    const sectionKey = `store:${label}`
+    blocks.push({ type: 'header', level: 1, label, sectionKey })
+    for (const item of sortByName(groupItems)) blocks.push({ type: 'item', item, sectionKey })
   }
   return blocks
 }
@@ -78,7 +89,8 @@ export function buildStoreCategoryBlocks<T extends ViewItem>(items: T[]): Block<
   })
   const blocks: Block<T>[] = []
   for (const [storeLabel, storeItems] of orderedStores) {
-    blocks.push({ type: 'header', level: 1, label: storeLabel })
+    const storeKey = `store:${storeLabel}`
+    blocks.push({ type: 'header', level: 1, label: storeLabel, sectionKey: storeKey })
     const catGroups = new Map<string, { sortOrder: number; items: T[] }>()
     for (const item of storeItems) {
       const key = item.departmentName
@@ -87,8 +99,10 @@ export function buildStoreCategoryBlocks<T extends ViewItem>(items: T[]): Block<
     }
     const orderedCats = [...catGroups.entries()].sort((a, b) => a[1].sortOrder - b[1].sortOrder)
     for (const [catLabel, catGroup] of orderedCats) {
-      blocks.push({ type: 'header', level: 2, label: catLabel })
-      for (const item of sortByName(catGroup.items)) blocks.push({ type: 'item', item })
+      const catKey = `${storeKey}::cat:${catLabel}`
+      blocks.push({ type: 'header', level: 2, label: catLabel, sectionKey: catKey, parentKey: storeKey })
+      for (const item of sortByName(catGroup.items))
+        blocks.push({ type: 'item', item, sectionKey: catKey, parentKey: storeKey })
     }
   }
   return blocks
@@ -97,11 +111,11 @@ export function buildStoreCategoryBlocks<T extends ViewItem>(items: T[]): Block<
 export function buildBlocks<T extends ViewItem>(items: T[], sortMode: SortMode): Block<T>[] {
   switch (sortMode) {
     case 'alphabetical':
-      return sortByName(items).map((item) => ({ type: 'item', item }))
+      return sortByName(items).map((item) => ({ type: 'item', item, sectionKey: 'flat' }))
     case 'favorites':
       return [...items]
         .sort((a, b) => Number(b.is_favorite) - Number(a.is_favorite) || a.name.localeCompare(b.name))
-        .map((item) => ({ type: 'item', item }))
+        .map((item) => ({ type: 'item', item, sectionKey: 'flat' }))
     case 'category':
       return buildCategoryBlocks(items)
     case 'store':
@@ -128,6 +142,7 @@ export function toViewItems<Item extends ListItem>(
       departmentName: dept?.name ?? 'Other',
       departmentSort: dept?.sort_order ?? 999,
       storeName: store?.name ?? '',
+      resolvedStoreId: storeId,
     }
   })
 }

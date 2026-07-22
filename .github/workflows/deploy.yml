@@ -22,16 +22,21 @@ jobs:
         working-directory: app
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
           cache-dependency-path: app/package-lock.json
       - run: npm ci
+      - id: build_number
+        run: echo "count=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
       - run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_BUILD_NUMBER: ${{ steps.build_number.outputs.count }}
       # GitHub Pages has no server-side router — direct hits on nested routes
       # (refresh, typed URL, invite/magic-link emails) 404 because only
       # index.html exists as a real file. Serving the same file as 404.html
