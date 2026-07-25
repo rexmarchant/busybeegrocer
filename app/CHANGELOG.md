@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/rexmarchant/busybeegrocer/compare/v1.2.0...v1.3.0) (2026-07-25)
+
+
+### Features
+
+* open a promo/about screen when the header logo is tapped ([be3a42e](https://github.com/rexmarchant/busybeegrocer/commit/be3a42ef31b7d0d5c7fcc3f8ed61146a5d82deed))
+
 # [1.2.0](https://github.com/rexmarchant/busybeegrocer/compare/v1.1.1...v1.2.0) (2026-07-25)
 
 
