@@ -4,12 +4,13 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useGroup } from '../contexts/GroupContext'
 import { useGroupMembers } from '../lib/hooks'
-import type { Invite } from '../types/database'
+import ConfirmModal from '../components/ConfirmModal'
+import type { Invite, Profile } from '../types/database'
 
 export default function GroupSettings() {
   const { user } = useAuth()
   const { groups, currentGroup, setCurrentGroupId, createGroup, refreshGroups } = useGroup()
-  const { members, loading: membersLoading } = useGroupMembers(currentGroup?.id)
+  const { members, loading: membersLoading, refetch: refetchMembers } = useGroupMembers(currentGroup?.id)
   const navigate = useNavigate()
 
   const [showNewGroup, setShowNewGroup] = useState(false)
@@ -17,6 +18,9 @@ export default function GroupSettings() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [pendingInvites, setPendingInvites] = useState<Invite[]>([])
   const [lastInviteLink, setLastInviteLink] = useState<string | null>(null)
+  const [removeTarget, setRemoveTarget] = useState<Profile | null>(null)
+
+  const isGroupOwner = currentGroup?.created_by === user?.id
 
   useEffect(() => {
     if (!currentGroup) return
@@ -84,10 +88,20 @@ export default function GroupSettings() {
     navigate('/')
   }
 
+  async function handleRemoveMember() {
+    if (!currentGroup || !removeTarget) return
+    await supabase.rpc('remove_group_member', {
+      p_group_id: currentGroup.id,
+      p_user_id: removeTarget.id,
+    })
+    setRemoveTarget(null)
+    await refetchMembers()
+  }
+
   return (
     <div className="mx-auto flex min-h-svh w-full max-w-2xl flex-1 flex-col bg-page px-4 py-6">
-      <Link to="/settings" className="mb-4 text-text-secondary">
-        ← Settings
+      <Link to="/settings" className="mb-4 inline-flex items-center gap-1 text-text-secondary">
+        <span className="text-2xl leading-none">←</span> Settings
       </Link>
       <h1 className="mb-4 text-lg font-semibold text-text-primary">Groups</h1>
 
@@ -134,8 +148,23 @@ export default function GroupSettings() {
           <ul className="mb-6 flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
             {!membersLoading &&
               members.map((m) => (
-                <li key={m.id} className="px-4 py-3 text-text-primary">
-                  {m.display_name || m.email} {m.id === user?.id && '(you)'}
+                <li key={m.id} className="flex items-center justify-between px-4 py-3">
+                  <span className="text-text-primary">
+                    {m.display_name || m.email} {m.id === user?.id && '(you)'}
+                    {m.id === currentGroup.created_by && (
+                      <span className="ml-2 rounded-full bg-page px-2 py-0.5 text-xs text-text-muted">
+                        Owner
+                      </span>
+                    )}
+                  </span>
+                  {isGroupOwner && m.id !== user?.id && (
+                    <button
+                      onClick={() => setRemoveTarget(m)}
+                      className="text-sm text-status-critical underline"
+                    >
+                      Remove
+                    </button>
+                  )}
                 </li>
               ))}
           </ul>
@@ -183,6 +212,17 @@ export default function GroupSettings() {
             Leave this group
           </button>
         </>
+      )}
+
+      {removeTarget && (
+        <ConfirmModal
+          title="Remove member?"
+          message={`${removeTarget.display_name || removeTarget.email} will lose access to this group's lists. Any lists they own will be reassigned to another member.`}
+          confirmLabel="Remove"
+          danger
+          onConfirm={handleRemoveMember}
+          onCancel={() => setRemoveTarget(null)}
+        />
       )}
     </div>
   )

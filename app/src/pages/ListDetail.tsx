@@ -331,12 +331,12 @@ export default function ListDetail() {
     <div className="flex min-h-svh flex-1 flex-col bg-page">
       <header className="sticky top-0 z-10 border-b border-border bg-surface px-4 py-3" style={{ borderTop: `4px solid ${color}` }}>
         <div className="mx-auto flex max-w-2xl items-center gap-3">
-          <Link to="/" className="text-text-secondary">
+          <Link to="/" className="shrink-0 text-2xl text-text-secondary">
             ←
           </Link>
           <button
             onClick={() => isOwner && setShowIconPicker(true)}
-            className="text-2xl"
+            className="shrink-0 text-2xl"
             aria-label="Change icon"
           >
             {listIconEmoji(list.icon)}
@@ -352,7 +352,7 @@ export default function ListDetail() {
             />
           ) : (
             <h1
-              className="flex-1 text-lg font-semibold text-text-primary"
+              className="min-w-0 flex-1 truncate text-lg font-semibold text-text-primary"
               onClick={() => isOwner && setRenaming(true)}
             >
               {list.name}
@@ -363,7 +363,7 @@ export default function ListDetail() {
               )}
             </h1>
           )}
-          <span className="whitespace-nowrap text-sm text-text-secondary">
+          <span className="shrink-0 whitespace-nowrap text-sm text-text-secondary">
             {uncheckedCount} item{uncheckedCount === 1 ? '' : 's'}
           </span>
           <button
@@ -372,23 +372,43 @@ export default function ListDetail() {
               setSearchQuery('')
             }}
             aria-label="Search items"
-            className="text-xl text-text-secondary"
+            className="shrink-0 text-xl text-text-secondary"
           >
             🔍
           </button>
           <button
             onClick={() => setShowListSettings(true)}
             aria-label="List settings"
-            className="text-xl text-text-secondary"
+            className="shrink-0 text-xl text-text-secondary"
           >
             ⚙️
           </button>
           <button
             onClick={() => navigate(`/lists/${list.id}/shop`)}
-            className="rounded-full px-4 py-2 text-sm font-medium text-white"
+            aria-label={isResuming ? 'Resume shopping' : 'Start shopping'}
+            className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
             style={{ backgroundColor: color }}
           >
-            {isResuming ? '▶ Resume Shopping' : 'Start Shopping'}
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-5 w-5"
+            >
+              <circle cx="9" cy="21" r="1" />
+              <circle cx="20" cy="21" r="1" />
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+            </svg>
+            {isResuming && (
+              <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-400">
+                <svg viewBox="0 0 24 24" fill="white" className="h-2.5 w-2.5">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </span>
+            )}
           </button>
         </div>
       </header>

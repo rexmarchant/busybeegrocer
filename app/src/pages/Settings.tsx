@@ -11,8 +11,8 @@ export default function Settings() {
     <div className="flex min-h-svh flex-1 flex-col bg-page">
       <Header />
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-6">
-        <Link to="/" className="mb-4 inline-block text-text-secondary">
-          ← Your Lists
+        <Link to="/" className="mb-4 inline-flex items-center gap-1 text-text-secondary">
+          <span className="text-2xl leading-none">←</span> Your Lists
         </Link>
         <h1 className="mb-4 text-lg font-semibold text-text-primary">Settings</h1>
 

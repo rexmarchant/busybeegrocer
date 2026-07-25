@@ -52,8 +52,8 @@ export default function CategorySettings() {
 
   return (
     <div className="mx-auto flex min-h-svh w-full max-w-2xl flex-1 flex-col bg-page px-4 py-6">
-      <Link to="/settings" className="mb-4 text-text-secondary">
-        ← Settings
+      <Link to="/settings" className="mb-4 inline-flex items-center gap-1 text-text-secondary">
+        <span className="text-2xl leading-none">←</span> Settings
       </Link>
       <h1 className="mb-4 text-lg font-semibold text-text-primary">Categories</h1>
       <p className="mb-4 text-sm text-text-secondary">
