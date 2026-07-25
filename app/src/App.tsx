@@ -4,6 +4,7 @@ import { useAuth } from './contexts/AuthContext'
 import { useGroup } from './contexts/GroupContext'
 import Login from './pages/Login'
 import AcceptInvite from './pages/AcceptInvite'
+import About from './pages/About'
 import GroupSetup from './pages/GroupSetup'
 import ListsHome from './pages/ListsHome'
 import ListDetail from './pages/ListDetail'
@@ -40,6 +41,15 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/join/:inviteId" element={<AcceptInvite />} />
+
+      <Route
+        path="/about"
+        element={
+          <RequireAuth>
+            <About />
+          </RequireAuth>
+        }
+      />
 
       <Route
         path="/group-setup"

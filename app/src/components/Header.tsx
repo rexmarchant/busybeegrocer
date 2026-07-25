@@ -86,7 +86,7 @@ export default function Header() {
     <div className="sticky top-0 z-10">
       <ResumeShoppingBanner />
       <header className="flex items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3">
-        <Link to="/" className="flex items-center gap-2">
+        <Link to="/about" className="flex items-center gap-2">
           <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" className="h-11 w-11 rounded-lg" />
           <span className="font-semibold text-text-primary">BusyBeeGrocer</span>
         </Link>
