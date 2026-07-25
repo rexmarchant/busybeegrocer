@@ -33,6 +33,16 @@ export function isBlockCollapsed(block: Block, collapsedKeys: Set<string>): bool
   return false
 }
 
+/** All collapsible section keys present in the current blocks (both levels, for
+ * Store+Category mode). Used to implement collapse-all/expand-all. */
+export function getAllSectionKeys(blocks: Block[]): string[] {
+  const keys = new Set<string>()
+  for (const b of blocks) {
+    if (b.type === 'header') keys.add(b.sectionKey)
+  }
+  return [...keys]
+}
+
 export function sortByName<T extends ViewItem>(items: T[]): T[] {
   return [...items].sort((a, b) => a.name.localeCompare(b.name))
 }

@@ -17,6 +17,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
     defaults:
       run:
         working-directory: app
@@ -30,6 +34,18 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
       - run: npm ci
+      # Bumps app/package.json's version based on Conventional Commits since the
+      # last release (fix: -> patch, feat: -> minor, "BREAKING CHANGE:" -> major)
+      # and pushes that bump back to main — [skip ci] in its commit message
+      # stops that push from re-triggering this workflow. Commits that don't
+      # follow the convention just don't trigger a bump; the step still
+      # succeeds either way, and the rest of the build proceeds unaffected.
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - id: build_number
         run: echo "count=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
       - run: npm run build

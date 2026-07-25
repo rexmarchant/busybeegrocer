@@ -7,12 +7,23 @@ import { useShoppingSession } from '../contexts/ShoppingSessionContext'
 import { useGroupMembers, profileLabel } from '../lib/hooks'
 import { addItemToList, removeItemFromList } from '../lib/listActions'
 import { listColorHex, listIconEmoji } from '../lib/constants'
-import { SORT_LABELS, buildBlocks, isBlockCollapsed, toViewItems, type SortMode, type ViewItem } from '../lib/itemGrouping'
+import {
+  SORT_LABELS,
+  buildBlocks,
+  getAllSectionKeys,
+  isBlockCollapsed,
+  toViewItems,
+  type SortMode,
+  type ViewItem,
+} from '../lib/itemGrouping'
+import { usePersistedState } from '../lib/usePersistedState'
+import CollapseHeader from '../components/CollapseHeader'
 import ConfirmModal from '../components/ConfirmModal'
 import IconPicker from '../components/IconPicker'
 import type { CatalogItem, Department, ListIcon, ListItem, ShoppingList, Store } from '../types/database'
 
 const NO_STORE_FILTER_KEY = '__no_store__'
+const EMPTY_SECTION_SET = new Set<string>()
 
 export default function ListDetail() {
   const { listId } = useParams<{ listId: string }>()
@@ -27,7 +38,8 @@ export default function ListDetail() {
   const [catalog, setCatalog] = useState<Record<string, CatalogItem>>({})
   const [departments, setDepartments] = useState<Department[]>([])
   const [stores, setStores] = useState<Store[]>([])
-  const [sortMode, setSortMode] = useState<SortMode>('alphabetical')
+  const uiKey = (field: string) => (listId ? `busybeegrocer:listUiState:${listId}:${field}` : null)
+  const [sortMode, setSortMode] = usePersistedState<SortMode>(uiKey('sortMode'), 'alphabetical')
   const [showAddItem, setShowAddItem] = useState(false)
   const [infoItemId, setInfoItemId] = useState<string | null>(null)
   const [removeConfirmItem, setRemoveConfirmItem] = useState<ViewItem | null>(null)
@@ -36,12 +48,22 @@ export default function ListDetail() {
   const [nameDraft, setNameDraft] = useState('')
   const [showListSettings, setShowListSettings] = useState(false)
   const [showIconPicker, setShowIconPicker] = useState(false)
-  const [showQuickList, setShowQuickList] = useState(false)
+  const [showQuickList, setShowQuickList] = usePersistedState<boolean>(uiKey('showQuickList'), false)
   const [quickListItems, setQuickListItems] = useState<(ListItem & { name: string })[]>([])
-  const [showNotes, setShowNotes] = useState(false)
-  const [showStoreFilter, setShowStoreFilter] = useState(false)
-  const [storeFilterIds, setStoreFilterIds] = useState<Set<string> | null>(null)
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
+  const [showNotes, setShowNotes] = usePersistedState<boolean>(uiKey('showNotes'), false)
+  const [showStoreFilter, setShowStoreFilter] = usePersistedState<boolean>(uiKey('showStoreFilter'), false)
+  const [storeFilterIds, setStoreFilterIds] = usePersistedState<Set<string> | null>(
+    uiKey('storeFilterIds'),
+    null,
+    { serialize: (s) => (s ? [...s] : null), deserialize: (v) => (v ? new Set(v as string[]) : null) },
+  )
+  const [collapsedSections, setCollapsedSections] = usePersistedState<Set<string>>(
+    uiKey('collapsedSections'),
+    new Set(),
+    { serialize: (s) => [...s], deserialize: (v) => new Set(v as string[]) },
+  )
+  const [showSearch, setShowSearch] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const isOwner = list?.owner_id === user?.id
   const isResuming = activeSession?.listId === listId
@@ -51,6 +73,14 @@ export default function ListDetail() {
     loadAll()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listId, currentGroup])
+
+  // Quick List's open/closed state is persisted, so a remount with it already
+  // open (e.g. coming back from Shopping mode) needs to (re)fetch its data —
+  // it isn't persisted itself, only the panel's open/closed toggle is.
+  useEffect(() => {
+    if (showQuickList) loadQuickList()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showQuickList, listId, catalog])
 
   async function loadAll() {
     if (!listId || !currentGroup) return
@@ -134,6 +164,10 @@ export default function ListDetail() {
     })
   }
 
+  function toggleCollapseAll() {
+    setCollapsedSections((prev) => (prev.size > 0 ? new Set() : new Set(getAllSectionKeys(blocks))))
+  }
+
   function toggleStoreFilter(key: string) {
     setStoreFilterIds((prev) => {
       const allKeys = [...stores.map((s) => s.id), NO_STORE_FILTER_KEY]
@@ -147,7 +181,19 @@ export default function ListDetail() {
 
   const uncheckedCount = useMemo(() => viewItems.filter((i) => !i.is_checked).length, [viewItems])
 
-  const blocks = useMemo(() => buildBlocks(viewItems, sortMode), [viewItems, sortMode])
+  const searchedItems = useMemo(() => {
+    if (!searchQuery.trim()) return viewItems
+    const q = searchQuery.trim().toLowerCase()
+    return viewItems.filter((i) => i.name.toLowerCase().includes(q))
+  }, [viewItems, searchQuery])
+
+  const blocks = useMemo(() => buildBlocks(searchedItems, sortMode), [searchedItems, sortMode])
+
+  // While actively searching, ignore collapsed-section state so a match hiding
+  // inside a collapsed category/store isn't invisible — without touching the
+  // real (persisted) collapsedSections, which is restored once search clears.
+  const isSearching = searchQuery.trim().length > 0
+  const effectiveCollapsed = isSearching ? EMPTY_SECTION_SET : collapsedSections
 
   const notesItems = useMemo(
     () => viewItems.filter((i) => !i.is_checked && i.note?.trim()).sort((a, b) => a.name.localeCompare(b.name)),
@@ -321,6 +367,16 @@ export default function ListDetail() {
             {uncheckedCount} item{uncheckedCount === 1 ? '' : 's'}
           </span>
           <button
+            onClick={() => {
+              setShowSearch((v) => !v)
+              setSearchQuery('')
+            }}
+            aria-label="Search items"
+            className="text-xl text-text-secondary"
+          >
+            🔍
+          </button>
+          <button
             onClick={() => setShowListSettings(true)}
             aria-label="List settings"
             className="text-xl text-text-secondary"
@@ -353,11 +409,7 @@ export default function ListDetail() {
             ✓ Check all
           </button>
           <button
-            onClick={() => {
-              const next = !showQuickList
-              setShowQuickList(next)
-              if (next) loadQuickList()
-            }}
+            onClick={() => setShowQuickList((v) => !v)}
             className="flex-1 rounded-xl border border-border py-2.5 text-sm text-text-secondary"
           >
             {showQuickList ? 'Hide' : '⚡'} Quick List
@@ -392,6 +444,16 @@ export default function ListDetail() {
           </ul>
         )}
 
+        {showSearch && !showNotes && (
+          <input
+            autoFocus
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search items…"
+            className="mb-3 w-full rounded-xl border border-border bg-surface px-4 py-3 text-base text-text-primary outline-none focus:border-primary"
+          />
+        )}
+
         {/* sort control + notes toggle */}
         <div className="mb-3 flex flex-wrap gap-1 text-xs">
           {(Object.keys(SORT_LABELS) as SortMode[]).map((mode) => (
@@ -421,6 +483,11 @@ export default function ListDetail() {
           >
             🔎 Filter{storeFilterIds ? ` (${storeFilterIds.size})` : ''}
           </button>
+          {blocks.some((b) => b.type === 'header') && (
+            <button onClick={toggleCollapseAll} className="rounded-full bg-surface px-3 py-1.5 text-text-secondary">
+              {collapsedSections.size > 0 ? 'Expand all' : 'Collapse all'}
+            </button>
+          )}
         </div>
 
         {showStoreFilter && (
@@ -471,23 +538,15 @@ export default function ListDetail() {
         ) : (
           <ul className="flex flex-col gap-1.5">
             {blocks.map((block, idx) => {
-              if (isBlockCollapsed(block, collapsedSections)) return null
+              if (isBlockCollapsed(block, effectiveCollapsed)) return null
               if (block.type === 'header') {
-                const isCollapsed = collapsedSections.has(block.sectionKey)
                 return (
                   <li key={`h-${idx}`}>
-                    <button
-                      type="button"
-                      onClick={() => toggleSection(block.sectionKey)}
-                      className={
-                        block.level === 1
-                          ? 'mt-4 flex w-full items-center justify-between rounded-lg bg-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-text-primary first:mt-0'
-                          : 'mt-1.5 ml-3 flex w-[calc(100%-0.75rem)] items-center justify-between rounded-md bg-border/60 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-text-secondary'
-                      }
-                    >
-                      <span>{block.label}</span>
-                      <span className="text-text-muted">{isCollapsed ? '▸' : '▾'}</span>
-                    </button>
+                    <CollapseHeader
+                      block={block}
+                      collapsed={effectiveCollapsed.has(block.sectionKey)}
+                      onToggle={toggleSection}
+                    />
                   </li>
                 )
               }

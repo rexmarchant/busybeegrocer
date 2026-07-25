@@ -3,11 +3,13 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Login() {
-  const { session, requestLoginLink } = useAuth()
+  const { session, requestLoginLink, verifyOtpCode } = useAuth()
   const [step, setStep] = useState<'email' | 'sent'>('email')
   const [email, setEmail] = useState('')
+  const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [verifying, setVerifying] = useState(false)
 
   if (session) return <Navigate to="/" replace />
 
@@ -22,6 +24,16 @@ export default function Login() {
       return
     }
     setStep('sent')
+  }
+
+  async function handleVerifyCode(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setVerifying(true)
+    const { error } = await verifyOtpCode(email.trim(), code.trim())
+    setVerifying(false)
+    if (error) setError(error)
+    // On success, the `session` state flips and the redirect above fires automatically.
   }
 
   return (
@@ -67,9 +79,39 @@ export default function Login() {
             <p className="text-sm text-text-secondary">
               Open it on this device to finish signing in — this page will update automatically.
             </p>
+
+            <form onSubmit={handleVerifyCode} className="flex w-full flex-col gap-3 border-t border-border pt-4">
+              <p className="text-xs text-text-secondary">
+                Using the app from your home screen? Enter the code from the email instead:
+              </p>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={10}
+                autoComplete="one-time-code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Code from email"
+                className="rounded-xl border border-border bg-surface px-4 py-3 text-center text-lg tracking-widest text-text-primary outline-none focus:border-primary"
+              />
+              {error && <p className="text-sm text-status-critical">{error}</p>}
+              <button
+                type="submit"
+                disabled={verifying || code.trim().length === 0}
+                className="rounded-xl bg-primary px-4 py-3 text-base font-medium text-white transition hover:bg-primary-hover disabled:opacity-60"
+              >
+                {verifying ? 'Verifying…' : 'Verify code'}
+              </button>
+            </form>
+
             <button
               type="button"
-              onClick={() => setStep('email')}
+              onClick={() => {
+                setStep('email')
+                setError(null)
+                setCode('')
+              }}
               className="text-center text-xs text-text-muted underline"
             >
               Use a different email

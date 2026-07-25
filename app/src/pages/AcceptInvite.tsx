@@ -12,7 +12,7 @@ interface Preview {
 
 export default function AcceptInvite() {
   const { inviteId } = useParams<{ inviteId: string }>()
-  const { session, requestLoginLink } = useAuth()
+  const { session, requestLoginLink, verifyOtpCode } = useAuth()
   const { setCurrentGroupId, refreshGroups } = useGroup()
   const navigate = useNavigate()
 
@@ -22,6 +22,8 @@ export default function AcceptInvite() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [alreadyAttempted, setAlreadyAttempted] = useState(false)
+  const [code, setCode] = useState('')
+  const [verifying, setVerifying] = useState(false)
 
   useEffect(() => {
     if (!inviteId) return
@@ -88,6 +90,17 @@ export default function AcceptInvite() {
     setStep('sent')
   }
 
+  async function handleVerifyCode(e: React.FormEvent) {
+    e.preventDefault()
+    if (!preview) return
+    setError(null)
+    setVerifying(true)
+    const { error } = await verifyOtpCode(preview.email, code.trim())
+    setVerifying(false)
+    if (error) setError(error)
+    // On success, the effect above (watching `session`) calls acceptInvite() automatically.
+  }
+
   if (loadError) {
     return (
       <Centered>
@@ -135,6 +148,30 @@ export default function AcceptInvite() {
             <p className="text-sm text-text-secondary">
               Open the link we sent to <strong>{preview.email}</strong> on this device to join.
             </p>
+
+            <form onSubmit={handleVerifyCode} className="flex w-full flex-col gap-3 border-t border-border pt-4">
+              <p className="text-xs text-text-secondary">
+                Using the app from your home screen? Enter the code from the email instead:
+              </p>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={10}
+                autoComplete="one-time-code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Code from email"
+                className="rounded-xl border border-border bg-surface px-4 py-3 text-center text-lg tracking-widest text-text-primary outline-none focus:border-primary"
+              />
+              <button
+                type="submit"
+                disabled={verifying || code.trim().length === 0}
+                className="rounded-xl bg-primary px-4 py-3 text-base font-medium text-white disabled:opacity-60"
+              >
+                {verifying ? 'Verifying…' : 'Verify code'}
+              </button>
+            </form>
           </div>
         )}
         {error && <p className="mt-3 text-sm text-status-critical">{error}</p>}

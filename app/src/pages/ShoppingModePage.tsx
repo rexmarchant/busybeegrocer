@@ -4,7 +4,17 @@ import { supabase } from '../lib/supabase'
 import { useGroup } from '../contexts/GroupContext'
 import { useShoppingSession } from '../contexts/ShoppingSessionContext'
 import { listColorHex, listIconEmoji } from '../lib/constants'
-import { buildBlocks, isBlockCollapsed, sortByName, toViewItems, type SortMode, type ViewItem } from '../lib/itemGrouping'
+import {
+  buildBlocks,
+  getAllSectionKeys,
+  isBlockCollapsed,
+  sortByName,
+  toViewItems,
+  type SortMode,
+  type ViewItem,
+} from '../lib/itemGrouping'
+import { usePersistedState } from '../lib/usePersistedState'
+import CollapseHeader from '../components/CollapseHeader'
 import type { CatalogItem, Department, ListItem, ShoppingList, Store } from '../types/database'
 
 const SHOP_SORT_LABELS: Record<Exclude<SortMode, 'favorites'>, string> = {
@@ -29,8 +39,16 @@ export default function ShoppingModePage() {
   const [catalog, setCatalog] = useState<Record<string, CatalogItem>>({})
   const [departments, setDepartments] = useState<Department[]>([])
   const [stores, setStores] = useState<Store[]>([])
-  const [sortMode, setSortMode] = useState<Exclude<SortMode, 'favorites'>>('alphabetical')
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
+  const shopUiKey = (field: string) => (listId ? `busybeegrocer:shopUiState:${listId}:${field}` : null)
+  const [sortMode, setSortMode] = usePersistedState<Exclude<SortMode, 'favorites'>>(
+    shopUiKey('sortMode'),
+    'alphabetical',
+  )
+  const [collapsedSections, setCollapsedSections] = usePersistedState<Set<string>>(
+    shopUiKey('collapsedSections'),
+    new Set(),
+    { serialize: (s) => [...s], deserialize: (v) => new Set(v as string[]) },
+  )
   const [elapsed, setElapsed] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
   const [ended, setEnded] = useState<{
@@ -145,6 +163,10 @@ export default function ShoppingModePage() {
     })
   }
 
+  function toggleCollapseAll() {
+    setCollapsedSections((prev) => (prev.size > 0 ? new Set() : new Set(getAllSectionKeys(remainingBlocks))))
+  }
+
   async function handleRefresh() {
     setRefreshing(true)
     await loadItems()
@@ -219,7 +241,12 @@ export default function ShoppingModePage() {
         onDone={() => navigate(`/lists/${list.id}`)}
       />
     ) : (
-      <BetterLuckScreen percent={ended.percent} onDone={() => navigate(`/lists/${list.id}`)} />
+      <BetterLuckScreen
+        list={list}
+        percent={ended.percent}
+        items={ended.sessionItems}
+        onDone={() => navigate(`/lists/${list.id}`)}
+      />
     )
   }
 
@@ -263,27 +290,24 @@ export default function ShoppingModePage() {
               {SHOP_SORT_LABELS[mode]}
             </button>
           ))}
+          {remainingBlocks.some((b) => b.type === 'header') && (
+            <button onClick={toggleCollapseAll} className="rounded-full bg-surface px-3 py-1.5 text-text-secondary">
+              {collapsedSections.size > 0 ? 'Expand all' : 'Collapse all'}
+            </button>
+          )}
         </div>
 
         <ul className="mb-6 flex flex-col gap-1.5">
           {remainingBlocks.map((block, idx) => {
             if (isBlockCollapsed(block, collapsedSections)) return null
             if (block.type === 'header') {
-              const isCollapsed = collapsedSections.has(block.sectionKey)
               return (
                 <li key={`h-${idx}`}>
-                  <button
-                    type="button"
-                    onClick={() => toggleSection(block.sectionKey)}
-                    className={
-                      block.level === 1
-                        ? 'mt-4 flex w-full items-center justify-between rounded-lg bg-border px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-text-primary first:mt-0'
-                        : 'mt-1.5 ml-3 flex w-[calc(100%-0.75rem)] items-center justify-between rounded-md bg-border/60 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-text-secondary'
-                    }
-                  >
-                    <span>{block.label}</span>
-                    <span className="text-text-muted">{isCollapsed ? '▸' : '▾'}</span>
-                  </button>
+                  <CollapseHeader
+                    block={block}
+                    collapsed={collapsedSections.has(block.sectionKey)}
+                    onToggle={toggleSection}
+                  />
                 </li>
               )
             }
@@ -352,7 +376,7 @@ export default function ShoppingModePage() {
           onClick={() => finish(false, viewItems)}
           className="mx-auto block w-full max-w-2xl rounded-xl border border-border py-3 font-medium text-text-secondary"
         >
-          End shopping
+          Finished shopping
         </button>
       </div>
     </div>
@@ -363,6 +387,20 @@ function formatTime(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60)
   const s = totalSeconds % 60
   return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+function buildMailtoLink(subject: string, items: ViewItem[]): string {
+  const body = items.map((i) => `- ${i.name}${i.quantity > 1 ? ` — Qty: ${i.quantity}` : ''}`).join('\n')
+  return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+}
+
+function sendList(subject: string, items: ViewItem[]) {
+  // A clicked anchor is less likely to trigger a full page reload on
+  // mobile browsers than setting window.location.href directly — that
+  // reload was wiping this screen's state when returning from Mail.
+  const link = document.createElement('a')
+  link.href = buildMailtoLink(subject, items)
+  link.click()
 }
 
 function CongratsScreen({
@@ -383,17 +421,6 @@ function CongratsScreen({
     day: 'numeric',
   })
 
-  function sendList() {
-    const body = items.map((i) => `- ${i.name}${i.quantity > 1 ? ` — Qty: ${i.quantity}` : ''}`).join('\n')
-    const subject = encodeURIComponent(`${list.name} — shopping list`)
-    // A clicked anchor is less likely to trigger a full page reload on
-    // mobile browsers than setting window.location.href directly — that
-    // reload was wiping this screen's state when returning from Mail.
-    const link = document.createElement('a')
-    link.href = `mailto:?subject=${subject}&body=${encodeURIComponent(body)}`
-    link.click()
-  }
-
   return (
     <div className="flex min-h-svh flex-1 flex-col items-center justify-center px-6 text-center text-white" style={{ backgroundColor: color }}>
       <p className="mb-2 text-5xl">🎉</p>
@@ -402,7 +429,10 @@ function CongratsScreen({
       <p className="mb-6 opacity-90">
         {date} · {formatTime(seconds)}
       </p>
-      <button onClick={sendList} className="mb-3 w-full max-w-xs rounded-xl bg-white/20 py-3 font-medium">
+      <button
+        onClick={() => sendList(`${list.name} — shopping list`, items)}
+        className="mb-3 w-full max-w-xs rounded-xl bg-white/20 py-3 font-medium"
+      >
         Send this list
       </button>
       <button onClick={onDone} className="w-full max-w-xs rounded-xl bg-white py-3 font-medium" style={{ color }}>
@@ -412,12 +442,28 @@ function CongratsScreen({
   )
 }
 
-function BetterLuckScreen({ percent, onDone }: { percent: number; onDone: () => void }) {
+function BetterLuckScreen({
+  list,
+  percent,
+  items,
+  onDone,
+}: {
+  list: ShoppingList
+  percent: number
+  items: ViewItem[]
+  onDone: () => void
+}) {
   return (
     <div className="flex min-h-svh flex-1 flex-col items-center justify-center bg-page px-6 text-center">
       <p className="mb-2 text-5xl">🤷</p>
       <h1 className="mb-2 text-2xl font-bold text-text-primary">Better luck next time</h1>
       <p className="mb-6 text-text-secondary">You got {percent}% of the list</p>
+      <button
+        onClick={() => sendList(`${list.name} — shopping list`, items)}
+        className="mb-3 w-full max-w-xs rounded-xl border border-border bg-surface py-3 font-medium text-text-primary"
+      >
+        Send this list
+      </button>
       <button onClick={onDone} className="w-full max-w-xs rounded-xl bg-primary py-3 font-medium text-white">
         Done
       </button>

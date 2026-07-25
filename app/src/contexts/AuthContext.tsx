@@ -7,6 +7,7 @@ interface AuthContextValue {
   user: User | null
   loading: boolean
   requestLoginLink: (email: string, redirectPath?: string) => Promise<{ error: string | null }>
+  verifyOtpCode: (email: string, token: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
 }
 
@@ -46,12 +47,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null }
   }
 
+  /** Alternative to clicking the emailed link — verifies the numeric code from
+   * the same email instead (length is a Supabase-side setting, not fixed at 6).
+   * Needed because on an installed/home-screen PWA the
+   * link often opens the external browser (a different storage context than
+   * the installed app), leaving the installed app's session unset; typing the
+   * code back into the already-open app avoids that context switch entirely. */
+  async function verifyOtpCode(email: string, token: string) {
+    const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
+    return { error: error?.message ?? null }
+  }
+
   async function signOut() {
     await supabase.auth.signOut()
   }
 
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, loading, requestLoginLink, signOut }}>
+    <AuthContext.Provider
+      value={{ session, user: session?.user ?? null, loading, requestLoginLink, verifyOtpCode, signOut }}
+    >
       {children}
     </AuthContext.Provider>
   )
