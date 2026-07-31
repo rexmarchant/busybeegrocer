@@ -24,6 +24,7 @@ import { usePersistedState } from '../lib/usePersistedState'
 import CollapseHeader from '../components/CollapseHeader'
 import ConfirmModal from '../components/ConfirmModal'
 import IconPicker from '../components/IconPicker'
+import TutorialModal from '../components/TutorialModal'
 import type { CatalogItem, Department, ListIcon, ListItem, ShoppingList, Store } from '../types/database'
 
 const EMPTY_SECTION_SET = new Set<string>()
@@ -50,6 +51,7 @@ export default function ListDetail() {
   const [renaming, setRenaming] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [showListSettings, setShowListSettings] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(false)
   const [showIconPicker, setShowIconPicker] = useState(false)
   const [showQuickList, setShowQuickList] = usePersistedState<boolean>(uiKey('showQuickList'), false)
   const [quickListItems, setQuickListItems] = useState<(ListItem & { name: string })[]>([])
@@ -634,6 +636,7 @@ export default function ListDetail() {
           isOwner={isOwner}
           members={members}
           onClose={() => setShowListSettings(false)}
+          onShowTutorial={() => setShowTutorial(true)}
           onTogglePrivate={handleTogglePrivate}
           onDuplicate={handleDuplicate}
           onResetCounts={() => {
@@ -646,6 +649,8 @@ export default function ListDetail() {
           }}
         />
       )}
+
+      {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
 
       {showIconPicker && (
         <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/30 px-6">
@@ -1042,6 +1047,7 @@ function ListSettingsModal({
   isOwner,
   members,
   onClose,
+  onShowTutorial,
   onTogglePrivate,
   onDuplicate,
   onResetCounts,
@@ -1051,6 +1057,7 @@ function ListSettingsModal({
   isOwner: boolean
   members: ReturnType<typeof useGroupMembers>['members']
   onClose: () => void
+  onShowTutorial: () => void
   onTogglePrivate: () => void
   onDuplicate: () => void
   onResetCounts: () => void
@@ -1088,6 +1095,14 @@ function ListSettingsModal({
             </button>
           </div>
         )}
+
+        {/* Not owner-gated — anyone on the list can watch how the app works. */}
+        <button
+          onClick={onShowTutorial}
+          className="mb-2 w-full rounded-xl border border-border py-2.5 text-text-primary"
+        >
+          🎬 Tutorial
+        </button>
 
         <button onClick={onClose} className="w-full rounded-xl border border-border py-2.5 text-text-secondary">
           Close

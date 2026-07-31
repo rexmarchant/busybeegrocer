@@ -4,3 +4,7 @@
 # OS junk
 .DS_Store
 Thumbs.db
+
+# Master video recordings — far too big for GitHub (100MB/file hard limit).
+# The web-encoded copy that actually ships lives in app/public/video/.
+assets/video/
