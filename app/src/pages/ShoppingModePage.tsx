@@ -5,10 +5,15 @@ import { useGroup } from '../contexts/GroupContext'
 import { useShoppingSession } from '../contexts/ShoppingSessionContext'
 import { listColorHex, listIconEmoji } from '../lib/constants'
 import {
+  NO_STORE_FILTER_KEY,
+  NO_STORE_LABEL,
   buildBlocks,
+  filterByStore,
   getAllSectionKeys,
   isBlockCollapsed,
   sortByName,
+  storeFilterStateOptions,
+  storeFilterStorageKey,
   toViewItems,
   type SortMode,
   type ViewItem,
@@ -49,6 +54,17 @@ export default function ShoppingModePage() {
     new Set(),
     { serialize: (s) => [...s], deserialize: (v) => new Set(v as string[]) },
   )
+  // Shares its storage key with the list page, so whatever store filter is set there
+  // carries straight into this trip.
+  const [storeFilterIds] = usePersistedState<Set<string> | null>(
+    listId ? storeFilterStorageKey(listId) : null,
+    null,
+    storeFilterStateOptions,
+  )
+  // loadItems() runs from init()'s closure, so read the filter through a ref to be sure
+  // it sees the current value rather than the one captured at mount.
+  const storeFilterRef = useRef(storeFilterIds)
+  storeFilterRef.current = storeFilterIds
   const [elapsed, setElapsed] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
   const [ended, setEnded] = useState<{
@@ -133,7 +149,12 @@ export default function ShoppingModePage() {
     const loadedItems = (itemData as ListItem[]) ?? []
     setItems(loadedItems)
 
-    const loadedViewItems = toViewItems(loadedItems, catalogMap, deptMap, storeMapLocal)
+    // Only items the current store filter lets through count towards this trip —
+    // anything filtered out isn't what we're shopping for right now.
+    const loadedViewItems = filterByStore(
+      toViewItems(loadedItems, catalogMap, deptMap, storeMapLocal),
+      storeFilterRef.current,
+    )
 
     // Anything currently unchecked is (still) part of what this trip is
     // shopping for — accumulate rather than overwrite, so items already
@@ -213,11 +234,19 @@ export default function ShoppingModePage() {
     return m
   }, [stores])
 
+  // Filtered by the list page's store filter, so every count and list below —
+  // "left to get", "in cart", and the emailed summary — covers only what's visible.
   const viewItems = useMemo(
-    () => toViewItems(items, catalog, departmentMap, storeMap),
-    [items, catalog, departmentMap, storeMap],
+    () => filterByStore(toViewItems(items, catalog, departmentMap, storeMap), storeFilterIds),
+    [items, catalog, departmentMap, storeMap, storeFilterIds],
   )
   const remaining = useMemo(() => viewItems.filter((i) => !i.is_checked), [viewItems])
+  const filterLabel = useMemo(() => {
+    if (!storeFilterIds) return null
+    const names = stores.filter((s) => storeFilterIds.has(s.id)).map((s) => s.name)
+    if (storeFilterIds.has(NO_STORE_FILTER_KEY)) names.push(NO_STORE_LABEL)
+    return names.length > 0 ? names.join(', ') : 'nothing (no stores selected)'
+  }, [storeFilterIds, stores])
   // "In cart" is scoped to this shopping trip only — items checked off elsewhere
   // (or already checked before the trip started) aren't part of what we're
   // shopping for right now, so they shouldn't clutter this list.
@@ -296,6 +325,12 @@ export default function ShoppingModePage() {
             </button>
           )}
         </div>
+
+        {filterLabel && (
+          <p className="mb-3 rounded-xl border border-border bg-surface px-3 py-2 text-xs text-text-secondary">
+            🔎 Showing {filterLabel} — change the filter on the list page.
+          </p>
+        )}
 
         <ul className="mb-6 flex flex-col gap-1.5">
           {remainingBlocks.map((block, idx) => {
@@ -390,7 +425,19 @@ function formatTime(totalSeconds: number) {
 }
 
 function buildMailtoLink(subject: string, items: ViewItem[]): string {
-  const body = items.map((i) => `- ${i.name}${i.quantity > 1 ? ` — Qty: ${i.quantity}` : ''}`).join('\n')
+  const line = (i: ViewItem) => `- ${i.name}${i.quantity > 1 ? ` — Qty: ${i.quantity}` : ''}`
+  const purchased = sortByName(items.filter((i) => i.is_checked))
+  const notPurchased = sortByName(items.filter((i) => !i.is_checked))
+
+  const sections: string[] = []
+  if (purchased.length > 0) {
+    sections.push(`PURCHASED (${purchased.length}):\n${purchased.map(line).join('\n')}`)
+  }
+  if (notPurchased.length > 0) {
+    sections.push(`NOT PURCHASED (${notPurchased.length}):\n${notPurchased.map(line).join('\n')}`)
+  }
+  const body = sections.length > 0 ? sections.join('\n\n') : 'No items on this trip.'
+
   return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
 }
 
@@ -401,6 +448,44 @@ function sendList(subject: string, items: ViewItem[]) {
   const link = document.createElement('a')
   link.href = buildMailtoLink(subject, items)
   link.click()
+}
+
+/** A blur/focus flicker this soon after the click is the browser handing off to the
+ * mail app (or declining to), not the user coming back from it. */
+const MAIL_RETURN_GRACE_MS = 1000
+
+/** "Send this list" should finish the trip the way Done does, but only once the mail
+ * app has actually had the message. mailto: gives no completion callback, so the cue
+ * is this tab regaining focus — i.e. the user is back from Mail — at which point we
+ * leave rather than dumping them back on the finished screen. If the mail app never
+ * opens, nothing fires and the buttons simply stay put. */
+function useSendThenDone(onDone: () => void) {
+  const pendingRef = useRef(false)
+  const sentAtRef = useRef(0)
+  const onDoneRef = useRef(onDone)
+  onDoneRef.current = onDone
+
+  useEffect(() => {
+    function handleReturn() {
+      if (!pendingRef.current) return
+      if (document.visibilityState !== 'visible') return
+      if (Date.now() - sentAtRef.current < MAIL_RETURN_GRACE_MS) return
+      pendingRef.current = false
+      onDoneRef.current()
+    }
+    window.addEventListener('focus', handleReturn)
+    document.addEventListener('visibilitychange', handleReturn)
+    return () => {
+      window.removeEventListener('focus', handleReturn)
+      document.removeEventListener('visibilitychange', handleReturn)
+    }
+  }, [])
+
+  return (subject: string, items: ViewItem[]) => {
+    pendingRef.current = true
+    sentAtRef.current = Date.now()
+    sendList(subject, items)
+  }
 }
 
 function CongratsScreen({
@@ -415,6 +500,7 @@ function CongratsScreen({
   onDone: () => void
 }) {
   const color = listColorHex(list.color)
+  const sendThenDone = useSendThenDone(onDone)
   const date = new Date().toLocaleDateString(undefined, {
     weekday: 'long',
     month: 'long',
@@ -430,7 +516,7 @@ function CongratsScreen({
         {date} · {formatTime(seconds)}
       </p>
       <button
-        onClick={() => sendList(`${list.name} — shopping list`, items)}
+        onClick={() => sendThenDone(`${list.name} — shopping list`, items)}
         className="mb-3 w-full max-w-xs rounded-xl bg-white/20 py-3 font-medium"
       >
         Send this list
@@ -453,13 +539,15 @@ function BetterLuckScreen({
   items: ViewItem[]
   onDone: () => void
 }) {
+  const sendThenDone = useSendThenDone(onDone)
+
   return (
     <div className="flex min-h-svh flex-1 flex-col items-center justify-center bg-page px-6 text-center">
       <p className="mb-2 text-5xl">🤷</p>
       <h1 className="mb-2 text-2xl font-bold text-text-primary">Better luck next time</h1>
       <p className="mb-6 text-text-secondary">You got {percent}% of the list</p>
       <button
-        onClick={() => sendList(`${list.name} — shopping list`, items)}
+        onClick={() => sendThenDone(`${list.name} — shopping list`, items)}
         className="mb-3 w-full max-w-xs rounded-xl border border-border bg-surface py-3 font-medium text-text-primary"
       >
         Send this list

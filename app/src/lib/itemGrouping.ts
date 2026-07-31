@@ -12,6 +12,25 @@ export const SORT_LABELS: Record<SortMode, string> = {
 
 export const NO_STORE_LABEL = 'No Preferred Store'
 
+/** Filter-set member standing in for "items with no preferred store". */
+export const NO_STORE_FILTER_KEY = '__no_store__'
+
+/** The store filter is chosen on the list page and shared with shopping mode, so both
+ * pages read/write the same persisted key. `null` means "no filter — show everything". */
+export function storeFilterStorageKey(listId: string) {
+  return `busybeegrocer:listUiState:${listId}:storeFilterIds`
+}
+
+export const storeFilterStateOptions = {
+  serialize: (s: Set<string> | null) => (s ? [...s] : null),
+  deserialize: (v: unknown) => (v ? new Set(v as string[]) : null),
+}
+
+export function filterByStore<T extends ViewItem>(items: T[], storeFilterIds: Set<string> | null): T[] {
+  if (!storeFilterIds) return items
+  return items.filter((item) => storeFilterIds.has(item.resolvedStoreId ?? NO_STORE_FILTER_KEY))
+}
+
 export interface ViewItem extends ListItem {
   name: string
   note: string | null

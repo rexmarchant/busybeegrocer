@@ -8,10 +8,14 @@ import { useGroupMembers, profileLabel } from '../lib/hooks'
 import { addItemToList, removeItemFromList } from '../lib/listActions'
 import { listColorHex, listIconEmoji } from '../lib/constants'
 import {
+  NO_STORE_FILTER_KEY,
   SORT_LABELS,
   buildBlocks,
+  filterByStore,
   getAllSectionKeys,
   isBlockCollapsed,
+  storeFilterStateOptions,
+  storeFilterStorageKey,
   toViewItems,
   type SortMode,
   type ViewItem,
@@ -22,7 +26,6 @@ import ConfirmModal from '../components/ConfirmModal'
 import IconPicker from '../components/IconPicker'
 import type { CatalogItem, Department, ListIcon, ListItem, ShoppingList, Store } from '../types/database'
 
-const NO_STORE_FILTER_KEY = '__no_store__'
 const EMPTY_SECTION_SET = new Set<string>()
 
 export default function ListDetail() {
@@ -53,9 +56,9 @@ export default function ListDetail() {
   const [showNotes, setShowNotes] = usePersistedState<boolean>(uiKey('showNotes'), false)
   const [showStoreFilter, setShowStoreFilter] = usePersistedState<boolean>(uiKey('showStoreFilter'), false)
   const [storeFilterIds, setStoreFilterIds] = usePersistedState<Set<string> | null>(
-    uiKey('storeFilterIds'),
+    listId ? storeFilterStorageKey(listId) : null,
     null,
-    { serialize: (s) => (s ? [...s] : null), deserialize: (v) => (v ? new Set(v as string[]) : null) },
+    storeFilterStateOptions,
   )
   const [collapsedSections, setCollapsedSections] = usePersistedState<Set<string>>(
     uiKey('collapsedSections'),
@@ -142,17 +145,14 @@ export default function ListDetail() {
     return m
   }, [stores])
 
-  const filteredItems = useMemo(() => {
-    if (!storeFilterIds) return items
-    return items.filter((item) => {
-      const storeId = item.preferred_store_id ?? catalog[item.catalog_item_id]?.default_store_id ?? null
-      return storeFilterIds.has(storeId ?? NO_STORE_FILTER_KEY)
-    })
-  }, [items, catalog, storeFilterIds])
+  const allViewItems: ViewItem[] = useMemo(
+    () => toViewItems(items, catalog, departmentMap, storeMap),
+    [items, catalog, departmentMap, storeMap],
+  )
 
   const viewItems: ViewItem[] = useMemo(
-    () => toViewItems(filteredItems, catalog, departmentMap, storeMap),
-    [filteredItems, catalog, departmentMap, storeMap],
+    () => filterByStore(allViewItems, storeFilterIds),
+    [allViewItems, storeFilterIds],
   )
 
   function toggleSection(key: string) {
