@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/rexmarchant/busybeegrocer/compare/v1.3.0...v1.4.0) (2026-07-31)
+
+
+### Features
+
+* share the list store filter with shopping mode and group the finish email ([27079e3](https://github.com/rexmarchant/busybeegrocer/commit/27079e3c7c93d415316a6ceb02c4d36b660d43e2))
+
 # [1.3.0](https://github.com/rexmarchant/busybeegrocer/compare/v1.2.0...v1.3.0) (2026-07-25)
 
 
