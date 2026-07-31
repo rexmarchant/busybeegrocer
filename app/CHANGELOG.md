@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/rexmarchant/busybeegrocer/compare/v1.4.0...v1.5.0) (2026-07-31)
+
+
+### Features
+
+* add a Tutorial video button to the list settings screen ([5b190dc](https://github.com/rexmarchant/busybeegrocer/commit/5b190dcd60c899326fdaa9ddb5c304d4be069f10))
+
 # [1.4.0](https://github.com/rexmarchant/busybeegrocer/compare/v1.3.0...v1.4.0) (2026-07-31)
 
 
