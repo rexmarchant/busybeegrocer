@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/rexmarchant/busybeegrocer/compare/v1.5.0...v1.5.1) (2026-08-01)
+
+
+### Bug Fixes
+
+* move the Tutorial button to the main settings screen and hide the dead gear ([13df195](https://github.com/rexmarchant/busybeegrocer/commit/13df195ec931be19b6c586c9cd8797e30d5ce77e))
+
 # [1.5.0](https://github.com/rexmarchant/busybeegrocer/compare/v1.4.0...v1.5.0) (2026-07-31)
 
 
