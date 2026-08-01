@@ -1,11 +1,14 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useGroup } from '../contexts/GroupContext'
 import Header from '../components/Header'
+import TutorialModal from '../components/TutorialModal'
 
 export default function Settings() {
   const { user, signOut } = useAuth()
   const { currentGroup } = useGroup()
+  const [showTutorial, setShowTutorial] = useState(false)
 
   return (
     <div className="flex min-h-svh flex-1 flex-col bg-page">
@@ -34,6 +37,13 @@ export default function Settings() {
             <span className="text-text-primary">Categories</span>
             <span className="text-text-muted">›</span>
           </Link>
+          <button
+            onClick={() => setShowTutorial(true)}
+            className="flex items-center justify-between px-4 py-3.5 text-left"
+          >
+            <span className="text-text-primary">🎬 Tutorial</span>
+            <span className="text-text-muted">›</span>
+          </button>
         </nav>
 
         <button
@@ -54,6 +64,8 @@ export default function Settings() {
           </p>
         </div>
       </main>
+
+      {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
     </div>
   )
 }

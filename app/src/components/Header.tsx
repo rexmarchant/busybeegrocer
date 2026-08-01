@@ -81,6 +81,10 @@ export default function Header() {
   const { currentGroup, groups, setCurrentGroupId } = useGroup()
   const itemCount = useGroupItemCount(currentGroup?.id)
   const online = useOnlineStatus()
+  const location = useLocation()
+  // On Settings itself the gear would just link to the page you're already on,
+  // so it reads as a dead button. Sub-pages keep it — there it navigates up.
+  const onSettingsPage = location.pathname === '/settings'
 
   return (
     <div className="sticky top-0 z-10">
@@ -117,13 +121,15 @@ export default function Header() {
             </select>
           )}
 
-          <Link
-            to="/settings"
-            aria-label="Settings"
-            className="rounded-full p-2 text-xl text-text-secondary hover:bg-page"
-          >
-            ⚙️
-          </Link>
+          {!onSettingsPage && (
+            <Link
+              to="/settings"
+              aria-label="Settings"
+              className="rounded-full p-2 text-xl text-text-secondary hover:bg-page"
+            >
+              ⚙️
+            </Link>
+          )}
         </div>
       </header>
     </div>
