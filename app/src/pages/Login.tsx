@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { suggestEmailCorrection } from '../lib/emailTypos'
 
 export default function Login() {
   const { session, requestLoginLink, verifyOtpCode } = useAuth()
@@ -10,6 +11,13 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [verifying, setVerifying] = useState(false)
+  // Only look for typos once they've left the field -- suggesting "gmail.com"
+  // while someone is still partway through typing it is just noise.
+  const [emailTouched, setEmailTouched] = useState(false)
+  const suggestion = useMemo(
+    () => (emailTouched ? suggestEmailCorrection(email) : null),
+    [email, emailTouched],
+  )
 
   if (session) return <Navigate to="/" replace />
 
@@ -54,10 +62,27 @@ export default function Login() {
                 autoFocus
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onBlur={() => setEmailTouched(true)}
                 placeholder="you@example.com"
                 className="rounded-xl border border-border bg-surface px-4 py-3 text-base text-text-primary outline-none focus:border-primary"
               />
             </label>
+
+            {/* A suggestion, never a block -- being confidently wrong about
+                someone's real address is worse than missing a typo. */}
+            {suggestion && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail(suggestion)
+                  setEmailTouched(false)
+                }}
+                className="-mt-2 text-left text-sm text-text-secondary"
+              >
+                Did you mean <span className="font-medium text-primary underline">{suggestion}</span>?
+              </button>
+            )}
+
             {error && <p className="text-sm text-status-critical">{error}</p>}
             <button
               type="submit"

@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useGroup } from '../contexts/GroupContext'
 import { useGroupMembers } from '../lib/hooks'
+import { suggestEmailCorrection } from '../lib/emailTypos'
 import ConfirmModal from '../components/ConfirmModal'
 import type { Invite, Profile } from '../types/database'
 
@@ -16,6 +17,11 @@ export default function GroupSettings() {
   const [showNewGroup, setShowNewGroup] = useState(false)
   const [newGroupName, setNewGroupName] = useState('')
   const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteTouched, setInviteTouched] = useState(false)
+  const inviteSuggestion = useMemo(
+    () => (inviteTouched ? suggestEmailCorrection(inviteEmail) : null),
+    [inviteEmail, inviteTouched],
+  )
   const [pendingInvites, setPendingInvites] = useState<Invite[]>([])
   const [lastInviteLink, setLastInviteLink] = useState<string | null>(null)
   const [removeTarget, setRemoveTarget] = useState<Profile | null>(null)
@@ -176,6 +182,7 @@ export default function GroupSettings() {
               required
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
+              onBlur={() => setInviteTouched(true)}
               placeholder="email@example.com"
               className="flex-1 rounded-xl border border-border bg-surface px-4 py-2.5 text-text-primary outline-none focus:border-primary"
             />
@@ -183,6 +190,22 @@ export default function GroupSettings() {
               Invite
             </button>
           </form>
+
+          {/* A mistyped invite is worse than a mistyped sign-in: accept_invite()
+              matches on the address, so the person you meant to invite can never
+              use it, and nobody finds out why. */}
+          {inviteSuggestion && (
+            <button
+              type="button"
+              onClick={() => {
+                setInviteEmail(inviteSuggestion)
+                setInviteTouched(false)
+              }}
+              className="mb-2 text-left text-sm text-text-secondary"
+            >
+              Did you mean <span className="font-medium text-primary underline">{inviteSuggestion}</span>?
+            </button>
+          )}
           {lastInviteLink && (
             <p className="mb-4 text-xs text-text-muted">
               Invite link: <span className="break-all">{lastInviteLink}</span>
