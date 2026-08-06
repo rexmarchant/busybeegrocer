@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { suggestEmailCorrection } from '../lib/emailTypos'
 import Captcha from '../components/Captcha'
@@ -104,6 +104,11 @@ export default function Login() {
             </button>
             <p className="text-center text-xs text-text-muted">
               No password needed — we'll email you a sign-in link.
+            </p>
+            <p className="text-center text-xs text-text-muted">
+              <Link to="/privacy" className="underline">
+                What we do with your data
+              </Link>
             </p>
           </form>
         ) : (

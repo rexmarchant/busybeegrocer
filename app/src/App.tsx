@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import { useGroup } from './contexts/GroupContext'
 import Login from './pages/Login'
+import Privacy from './pages/Privacy'
 import AcceptInvite from './pages/AcceptInvite'
 import About from './pages/About'
 import GroupSetup from './pages/GroupSetup'
@@ -40,6 +41,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      {/* No RequireAuth: you should be able to read what the app collects
+          before handing over your email address, not after. */}
+      <Route path="/privacy" element={<Privacy />} />
       <Route path="/join/:inviteId" element={<AcceptInvite />} />
 
       <Route

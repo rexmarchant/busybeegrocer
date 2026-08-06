@@ -44,6 +44,10 @@ export default function Settings() {
             <span className="text-text-primary">🎬 Tutorial</span>
             <span className="text-text-muted">›</span>
           </button>
+          <Link to="/privacy" className="flex items-center justify-between px-4 py-3.5">
+            <span className="text-text-primary">Privacy</span>
+            <span className="text-text-muted">›</span>
+          </Link>
         </nav>
 
         <button

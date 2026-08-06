@@ -15,6 +15,9 @@ export default defineConfig(({ command }) => {
 
   return {
     base,
+    // PRIVACY.md lives at the repo root, one level above Vite's root, and the
+    // app imports it with ?raw so the policy exists in exactly one place.
+    server: { fs: { allow: ['..'] } },
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),
       __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
