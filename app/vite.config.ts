@@ -32,6 +32,19 @@ export default defineConfig(({ command }) => {
           name: 'BusyBeeGrocer',
           short_name: 'BusyBeeGrocer',
           description: 'Shared shopping lists for your group.',
+          // Without an explicit id, a PWA's identity defaults to its start_url,
+          // which means changing start_url orphans every existing install.
+          // Setting it to `base` resolves to exactly the same value the implicit
+          // id has today ('/busybeegrocer/', trailing slash included), so nobody
+          // currently running the installed app is affected -- while making the
+          // identity explicit from here on.
+          //
+          // NOTE for the busybeegrocer.com move: identity is scoped to the
+          // origin, so a domain change orphans installs regardless and everyone
+          // reinstalls once. At that point pin this to a permanent value that
+          // does NOT track `base`, so any future path change is survivable.
+          id: base,
+          categories: ['shopping', 'lifestyle', 'productivity'],
           theme_color: '#2a78d6',
           background_color: '#fcfcfb',
           display: 'standalone',
