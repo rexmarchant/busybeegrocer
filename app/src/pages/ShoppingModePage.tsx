@@ -20,6 +20,7 @@ import {
 } from '../lib/itemGrouping'
 import { usePersistedState } from '../lib/usePersistedState'
 import { isNetworkFailure, useOfflineQueue } from '../lib/useOfflineQueue'
+import { describeCacheAge, listCacheKey, readCache, writeCache, type ListSnapshot } from '../lib/offlineCache'
 import CollapseHeader from '../components/CollapseHeader'
 import Toast, { useToast } from '../components/Toast'
 import type { CatalogItem, Department, ListItem, ShoppingList, Store } from '../types/database'
@@ -69,6 +70,12 @@ export default function ShoppingModePage() {
   storeFilterRef.current = storeFilterIds
   const [elapsed, setElapsed] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
+  /** Set when the screen is showing a saved copy rather than confirmed data. */
+  const [staleSince, setStaleSince] = useState<number | null>(null)
+  // loadItems() writes the shared cache and needs the current list, but it runs
+  // from init()'s closure where `list` state would still be null.
+  const listRef = useRef<ShoppingList | null>(null)
+  listRef.current = list
   const { toast, showToast, clearToast } = useToast()
   // Replays anything queued while offline, then re-reads so the screen matches
   // the server again. loadItems is stable enough for this -- it only reads refs
@@ -106,8 +113,24 @@ export default function ShoppingModePage() {
 
   async function init() {
     if (!listId || !currentGroup) return
+
+    // Paint from cache before touching the network. Without this, arriving in a
+    // shop with no signal leaves you on "Starting shopping mode…" forever,
+    // because every step below waits on a request that will never land.
+    const cached = readCache<ListSnapshot>(listCacheKey(listId))
+    if (cached) {
+      setList(cached.data.list)
+      setItems(cached.data.items)
+      const cMap: Record<string, CatalogItem> = {}
+      for (const c of cached.data.catalog) cMap[c.id] = c
+      setCatalog(cMap)
+      setDepartments(cached.data.departments)
+      setStores(cached.data.stores)
+      setStaleSince(cached.at)
+    }
+
     const { data: listData } = await supabase.from('lists').select('*').eq('id', listId).single()
-    setList(listData as ShoppingList)
+    if (listData) setList(listData as ShoppingList)
 
     let activeSessionId: string
     let activeStartedAt: number
@@ -139,12 +162,27 @@ export default function ShoppingModePage() {
 
   async function loadItems() {
     if (!listId || !currentGroup) return
-    const [{ data: itemData }, { data: catalogData }, { data: deptData }, { data: storeData }] = await Promise.all([
+    const [itemRes, catalogRes, deptRes, storeRes] = await Promise.all([
       supabase.from('list_items').select('*').eq('list_id', listId).is('removed_at', null),
       supabase.from('catalog_items').select('*').eq('group_id', currentGroup.id),
       supabase.from('departments').select('*').eq('group_id', currentGroup.id).order('sort_order'),
       supabase.from('stores').select('*').eq('group_id', currentGroup.id).order('name'),
     ])
+
+    // On a failed read, keep what's on screen and say it's stale. Crucially,
+    // return before the auto-finish check below: deciding a trip is complete
+    // from data we couldn't confirm would end someone's shop mid-aisle.
+    if (itemRes.error || itemRes.data == null) {
+      const cached = readCache<ListSnapshot>(listCacheKey(listId))
+      setStaleSince(cached ? cached.at : Date.now())
+      return
+    }
+    setStaleSince(null)
+
+    const { data: itemData } = itemRes
+    const catalogData = catalogRes.data
+    const deptData = deptRes.data
+    const storeData = storeRes.data
     const catalogMap: Record<string, CatalogItem> = {}
     for (const c of (catalogData as CatalogItem[]) ?? []) catalogMap[c.id] = c
     const deptMap: Record<string, Department> = {}
@@ -158,6 +196,16 @@ export default function ShoppingModePage() {
 
     const loadedItems = (itemData as ListItem[]) ?? []
     setItems(loadedItems)
+
+    // Same cache the list page reads, so whichever screen you open first keeps
+    // the other one usable offline.
+    writeCache<ListSnapshot>(listCacheKey(listId), {
+      list: listRef.current,
+      items: loadedItems,
+      catalog: (catalogData as CatalogItem[]) ?? [],
+      departments: (deptData as Department[]) ?? [],
+      stores: (storeData as Store[]) ?? [],
+    })
 
     // Only items the current store filter lets through count towards this trip —
     // anything filtered out isn't what we're shopping for right now.
@@ -364,6 +412,14 @@ export default function ShoppingModePage() {
         {filterLabel && (
           <p className="mb-3 rounded-xl border border-border bg-surface px-3 py-2 text-xs text-text-secondary">
             🔎 Showing {filterLabel} — change the filter on the list page.
+          </p>
+        )}
+
+        {/* Say plainly that this is a saved copy, rather than let someone shop
+            from data they assume is current. */}
+        {staleSince !== null && (
+          <p className="mb-3 rounded-xl border border-border bg-surface px-3 py-2 text-xs text-text-secondary">
+            📴 Offline — showing your list as saved at {describeCacheAge(staleSince)}.
           </p>
         )}
 

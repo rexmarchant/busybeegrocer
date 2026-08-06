@@ -22,6 +22,7 @@ import {
 } from '../lib/itemGrouping'
 import { usePersistedState } from '../lib/usePersistedState'
 import { isNetworkFailure, useOfflineQueue } from '../lib/useOfflineQueue'
+import { describeCacheAge, listCacheKey, readCache, writeCache, type ListSnapshot } from '../lib/offlineCache'
 import CollapseHeader from '../components/CollapseHeader'
 import ConfirmModal from '../components/ConfirmModal'
 import IconPicker from '../components/IconPicker'
@@ -29,6 +30,7 @@ import Toast, { useToast } from '../components/Toast'
 import type { CatalogItem, Department, ListIcon, ListItem, ShoppingList, Store } from '../types/database'
 
 const EMPTY_SECTION_SET = new Set<string>()
+
 
 export default function ListDetail() {
   const { listId } = useParams<{ listId: string }>()
@@ -74,15 +76,40 @@ export default function ListDetail() {
   )
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  /** When set, the screen is showing cached data of this age rather than
+   * anything the server has confirmed. */
+  const [staleSince, setStaleSince] = useState<number | null>(null)
 
   const isOwner = list?.owner_id === user?.id
   const isResuming = activeSession?.listId === listId
 
   useEffect(() => {
     if (!listId || !currentGroup) return
+    // Paint the last-known list first so a cold start -- especially one made
+    // standing in a shop with no signal -- shows something usable immediately,
+    // rather than an empty list while a request that will never arrive times
+    // out. loadAll() replaces it the moment real data lands.
+    const cached = readCache<ListSnapshot>(listCacheKey(listId))
+    if (cached) {
+      applyListData(cached.data)
+      setStaleSince(cached.at)
+    }
     loadAll()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listId, currentGroup])
+
+  function applyListData(data: ListSnapshot) {
+    if (data.list) {
+      setList(data.list)
+      setNameDraft(data.list.name)
+    }
+    setItems(data.items)
+    const catalogMap: Record<string, CatalogItem> = {}
+    for (const c of data.catalog) catalogMap[c.id] = c
+    setCatalog(catalogMap)
+    setDepartments(data.departments)
+    setStores(data.stores)
+  }
 
   // Quick List's open/closed state is persisted, so a remount with it already
   // open (e.g. coming back from Shopping mode) needs to (re)fetch its data —
@@ -94,25 +121,35 @@ export default function ListDetail() {
 
   async function loadAll() {
     if (!listId || !currentGroup) return
-    const [{ data: listData }, { data: itemData }, { data: catalogData }, { data: deptData }, { data: storeData }] =
-      await Promise.all([
-        supabase.from('lists').select('*').eq('id', listId).single(),
-        supabase.from('list_items').select('*').eq('list_id', listId).is('removed_at', null),
-        supabase.from('catalog_items').select('*').eq('group_id', currentGroup.id),
-        supabase.from('departments').select('*').eq('group_id', currentGroup.id).order('sort_order'),
-        supabase.from('stores').select('*').eq('group_id', currentGroup.id).order('name'),
-      ])
+    const [listRes, itemRes, catalogRes, deptRes, storeRes] = await Promise.all([
+      supabase.from('lists').select('*').eq('id', listId).single(),
+      supabase.from('list_items').select('*').eq('list_id', listId).is('removed_at', null),
+      supabase.from('catalog_items').select('*').eq('group_id', currentGroup.id),
+      supabase.from('departments').select('*').eq('group_id', currentGroup.id).order('sort_order'),
+      supabase.from('stores').select('*').eq('group_id', currentGroup.id).order('name'),
+    ])
 
-    if (listData) {
-      setList(listData as ShoppingList)
-      setNameDraft((listData as ShoppingList).name)
+    // A failed read must never blank the screen. This runs after every mutation,
+    // and coercing the failure to `[]` used to wipe a list that was there a
+    // moment ago. Whatever is already in state is at least as fresh as the
+    // cache -- it includes optimistic changes the cache doesn't -- so on failure
+    // the right move is to leave it alone and just say the data is stale.
+    if (itemRes.error || itemRes.data == null) {
+      const cached = readCache<ListSnapshot>(listCacheKey(listId))
+      setStaleSince(cached ? cached.at : Date.now())
+      return
     }
-    setItems((itemData as ListItem[]) ?? [])
-    const catalogMap: Record<string, CatalogItem> = {}
-    for (const c of (catalogData as CatalogItem[]) ?? []) catalogMap[c.id] = c
-    setCatalog(catalogMap)
-    setDepartments((deptData as Department[]) ?? [])
-    setStores((storeData as Store[]) ?? [])
+
+    const fresh: ListSnapshot = {
+      list: (listRes.data as ShoppingList) ?? null,
+      items: itemRes.data as ListItem[],
+      catalog: (catalogRes.data as CatalogItem[]) ?? [],
+      departments: (deptRes.data as Department[]) ?? [],
+      stores: (storeRes.data as Store[]) ?? [],
+    }
+    applyListData(fresh)
+    writeCache(listCacheKey(listId), fresh)
+    setStaleSince(null)
   }
 
   async function loadQuickList() {
@@ -535,6 +572,14 @@ export default function ListDetail() {
             </button>
           )}
         </div>
+
+        {/* Say plainly that this is a saved copy. A list that silently might be
+            out of date is worse than one you know is. */}
+        {staleSince !== null && (
+          <p className="mb-3 rounded-xl border border-border bg-surface px-3 py-2 text-xs text-text-secondary">
+            📴 Offline — showing your list as saved at {describeCacheAge(staleSince)}.
+          </p>
+        )}
 
         {/* Queued work is otherwise invisible, and "did that save?" is exactly
             the doubt this whole change exists to remove. */}
