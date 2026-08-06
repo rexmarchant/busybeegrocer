@@ -24,6 +24,7 @@ import { usePersistedState } from '../lib/usePersistedState'
 import CollapseHeader from '../components/CollapseHeader'
 import ConfirmModal from '../components/ConfirmModal'
 import IconPicker from '../components/IconPicker'
+import Toast, { useToast } from '../components/Toast'
 import type { CatalogItem, Department, ListIcon, ListItem, ShoppingList, Store } from '../types/database'
 
 const EMPTY_SECTION_SET = new Set<string>()
@@ -43,6 +44,7 @@ export default function ListDetail() {
   const [stores, setStores] = useState<Store[]>([])
   const uiKey = (field: string) => (listId ? `busybeegrocer:listUiState:${listId}:${field}` : null)
   const [sortMode, setSortMode] = usePersistedState<SortMode>(uiKey('sortMode'), 'alphabetical')
+  const { toast, showToast, clearToast } = useToast()
   const [showAddItem, setShowAddItem] = useState(false)
   const [infoItemId, setInfoItemId] = useState<string | null>(null)
   const [removeConfirmItem, setRemoveConfirmItem] = useState<ViewItem | null>(null)
@@ -223,10 +225,24 @@ export default function ListDetail() {
   }
 
   async function toggleChecked(item: ViewItem) {
-    await supabase.rpc('toggle_list_item_checked', {
+    const nextChecked = !item.is_checked
+
+    // Same optimistic treatment as shopping mode -- see ShoppingModePage.toggle.
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_checked: nextChecked } : i)))
+
+    const { error } = await supabase.rpc('toggle_list_item_checked', {
       p_item_id: item.id,
-      p_checked: !item.is_checked,
+      p_checked: nextChecked,
     })
+
+    if (error) {
+      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_checked: !nextChecked } : i)))
+      showToast(
+        navigator.onLine ? "Couldn't save that change" : "You're offline — that change didn't save",
+      )
+      return
+    }
+
     loadAll()
   }
 
@@ -329,6 +345,7 @@ export default function ListDetail() {
 
   return (
     <div className="flex min-h-svh flex-1 flex-col bg-page">
+      <Toast toast={toast} onDismiss={clearToast} />
       <header className="sticky top-0 z-10 border-b border-border bg-surface px-4 py-3" style={{ borderTop: `4px solid ${color}` }}>
         <div className="mx-auto flex max-w-2xl items-center gap-3">
           <Link to="/" className="shrink-0 text-2xl text-text-secondary">

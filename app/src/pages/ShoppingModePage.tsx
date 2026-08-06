@@ -20,6 +20,7 @@ import {
 } from '../lib/itemGrouping'
 import { usePersistedState } from '../lib/usePersistedState'
 import CollapseHeader from '../components/CollapseHeader'
+import Toast, { useToast } from '../components/Toast'
 import type { CatalogItem, Department, ListItem, ShoppingList, Store } from '../types/database'
 
 const SHOP_SORT_LABELS: Record<Exclude<SortMode, 'favorites'>, string> = {
@@ -67,6 +68,7 @@ export default function ShoppingModePage() {
   storeFilterRef.current = storeFilterIds
   const [elapsed, setElapsed] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
+  const { toast, showToast, clearToast } = useToast()
   const [ended, setEnded] = useState<{
     completed: boolean
     percent: number
@@ -201,10 +203,28 @@ export default function ShoppingModePage() {
   }
 
   async function toggle(item: ViewItem) {
-    await supabase.rpc('toggle_list_item_checked', {
+    const nextChecked = !item.is_checked
+
+    // Update locally first. Signal inside a shop is often the least reliable
+    // thing in the building, and a checkbox that waits on a round trip before
+    // moving reads as broken -- which is exactly what it used to do.
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_checked: nextChecked } : i)))
+
+    const { error } = await supabase.rpc('toggle_list_item_checked', {
       p_item_id: item.id,
-      p_checked: !item.is_checked,
+      p_checked: nextChecked,
     })
+
+    if (error) {
+      // Put it back and say so. Silently reverting is worse than not moving at
+      // all -- you'd walk away believing the item was checked off.
+      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_checked: !nextChecked } : i)))
+      showToast(
+        navigator.onLine ? "Couldn't save that change" : "You're offline — that change didn't save",
+      )
+      return
+    }
+
     await loadItems()
   }
 
@@ -281,6 +301,7 @@ export default function ShoppingModePage() {
 
   return (
     <div className="flex min-h-svh flex-1 flex-col bg-page">
+      <Toast toast={toast} onDismiss={clearToast} />
       <header className="sticky top-0 z-10 px-4 py-4 text-white" style={{ backgroundColor: color }}>
         <div className="mx-auto flex max-w-2xl items-center justify-between">
           <div>
