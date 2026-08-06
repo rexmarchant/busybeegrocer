@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import App from './App.tsx'
 import ErrorBoundary from './components/ErrorBoundary'
-import { installGlobalErrorHandlers } from './lib/reportError'
+import { initErrorReporting, installGlobalErrorHandlers } from './lib/reportError'
 import { AuthProvider } from './contexts/AuthContext'
 import { GroupProvider } from './contexts/GroupContext'
 import { ShoppingSessionProvider } from './contexts/ShoppingSessionContext'
@@ -13,6 +13,7 @@ import { ShoppingSessionProvider } from './contexts/ShoppingSessionContext'
 const queryClient = new QueryClient()
 
 // Before anything renders, so a crash during startup is still reported.
+initErrorReporting()
 installGlobalErrorHandlers()
 
 // BASE_URL is '/' in dev and '/busybeegrocer/' in the GitHub Pages build.

@@ -53,6 +53,9 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_BUILD_NUMBER: ${{ steps.build_number.outputs.count }}
+          # Publishable by design -- it only permits sending events, not reading
+          # them. Kept as a secret purely so local builds stay console-only.
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
       # GitHub Pages has no server-side router — direct hits on nested routes
       # (refresh, typed URL, invite/magic-link emails) 404 because only
       # index.html exists as a real file. Serving the same file as 404.html
