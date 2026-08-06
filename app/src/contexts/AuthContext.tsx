@@ -6,7 +6,11 @@ interface AuthContextValue {
   session: Session | null
   user: User | null
   loading: boolean
-  requestLoginLink: (email: string, redirectPath?: string) => Promise<{ error: string | null }>
+  requestLoginLink: (
+    email: string,
+    redirectPath?: string,
+    captchaToken?: string,
+  ) => Promise<{ error: string | null }>
   verifyOtpCode: (email: string, token: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
 }
@@ -36,12 +40,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * trailing slash), NOT the site origin — the app can be deployed under a
    * subpath (e.g. GitHub Pages' /busybeegrocer/), and window.location.origin
    * alone would drop that prefix, sending people to the wrong URL. */
-  async function requestLoginLink(email: string, redirectPath = '') {
+  async function requestLoginLink(email: string, redirectPath = '', captchaToken?: string) {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         shouldCreateUser: true,
         emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}${redirectPath}`,
+        // Required once CAPTCHA protection is enabled in Supabase. Anyone could
+        // otherwise sit on this endpoint in a loop and exhaust the daily Resend
+        // quota, which locks real people out of signing in.
+        captchaToken,
       },
     })
     return { error: error?.message ?? null }

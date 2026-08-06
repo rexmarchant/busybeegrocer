@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useGroup } from '../contexts/GroupContext'
+import Captcha from '../components/Captcha'
 
 interface Preview {
   group_name: string
@@ -21,6 +22,8 @@ export default function AcceptInvite() {
   const [step, setStep] = useState<'email' | 'sent' | 'joining'>('email')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const [captchaNonce, setCaptchaNonce] = useState(0)
   const [alreadyAttempted, setAlreadyAttempted] = useState(false)
   const [code, setCode] = useState('')
   const [verifying, setVerifying] = useState(false)
@@ -81,10 +84,17 @@ export default function AcceptInvite() {
     if (!preview || !inviteId) return
     setError(null)
     setSubmitting(true)
-    const { error } = await requestLoginLink(preview.email, `join/${inviteId}`)
+    const { error } = await requestLoginLink(
+      preview.email,
+      `join/${inviteId}`,
+      captchaToken ?? undefined,
+    )
     setSubmitting(false)
     if (error) {
       setError(error)
+      // Token is spent either way; a retry needs a fresh widget.
+      setCaptchaToken(null)
+      setCaptchaNonce((n) => n + 1)
       return
     }
     setStep('sent')
@@ -135,13 +145,19 @@ export default function AcceptInvite() {
         </p>
 
         {step === 'email' ? (
-          <button
-            onClick={handleRequestLink}
-            disabled={submitting}
-            className="w-full rounded-xl bg-primary px-4 py-3 text-base font-medium text-white disabled:opacity-60"
-          >
-            {submitting ? 'Sending link…' : 'Send me a link to join'}
-          </button>
+          <div className="flex flex-col gap-4">
+            {/* This path calls signInWithOtp too, so it needs a token for the
+                same reason the login form does -- without it, accepting an
+                invite would fail once CAPTCHA protection is switched on. */}
+            <Captcha key={captchaNonce} onToken={setCaptchaToken} onError={setError} />
+            <button
+              onClick={handleRequestLink}
+              disabled={submitting || !captchaToken}
+              className="w-full rounded-xl bg-primary px-4 py-3 text-base font-medium text-white disabled:opacity-60"
+            >
+              {submitting ? 'Sending link…' : captchaToken ? 'Send me a link to join' : 'Checking…'}
+            </button>
+          </div>
         ) : (
           <div className="flex flex-col items-center gap-3">
             <p className="text-4xl">📬</p>

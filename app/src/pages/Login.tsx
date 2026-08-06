@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { suggestEmailCorrection } from '../lib/emailTypos'
+import Captcha from '../components/Captcha'
 
 export default function Login() {
   const { session, requestLoginLink, verifyOtpCode } = useAuth()
@@ -14,6 +15,10 @@ export default function Login() {
   // Only look for typos once they've left the field -- suggesting "gmail.com"
   // while someone is still partway through typing it is just noise.
   const [emailTouched, setEmailTouched] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  // Bumped to remount the widget: tokens are single-use, so a failed attempt
+  // must not be retried with the same one.
+  const [captchaNonce, setCaptchaNonce] = useState(0)
   const suggestion = useMemo(
     () => (emailTouched ? suggestEmailCorrection(email) : null),
     [email, emailTouched],
@@ -25,10 +30,14 @@ export default function Login() {
     e.preventDefault()
     setError(null)
     setSubmitting(true)
-    const { error } = await requestLoginLink(email.trim())
+    const { error } = await requestLoginLink(email.trim(), '', captchaToken ?? undefined)
     setSubmitting(false)
     if (error) {
       setError(error)
+      // The token is spent whether or not the request succeeded, so a retry
+      // needs a fresh one.
+      setCaptchaToken(null)
+      setCaptchaNonce((n) => n + 1)
       return
     }
     setStep('sent')
@@ -83,13 +92,15 @@ export default function Login() {
               </button>
             )}
 
+            <Captcha key={captchaNonce} onToken={setCaptchaToken} onError={setError} />
+
             {error && <p className="text-sm text-status-critical">{error}</p>}
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || !captchaToken}
               className="rounded-xl bg-primary px-4 py-3 text-base font-medium text-white transition hover:bg-primary-hover disabled:opacity-60"
             >
-              {submitting ? 'Sending link…' : 'Continue'}
+              {submitting ? 'Sending link…' : captchaToken ? 'Continue' : 'Checking…'}
             </button>
             <p className="text-center text-xs text-text-muted">
               No password needed — we'll email you a sign-in link.
@@ -136,6 +147,9 @@ export default function Login() {
                 setStep('email')
                 setError(null)
                 setCode('')
+                // The previous token was consumed by the send that got us here.
+                setCaptchaToken(null)
+                setCaptchaNonce((n) => n + 1)
               }}
               className="text-center text-xs text-text-muted underline"
             >
