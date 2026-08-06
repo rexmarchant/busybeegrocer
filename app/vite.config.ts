@@ -49,6 +49,33 @@ export default defineConfig(({ command }) => {
           background_color: '#fcfcfb',
           display: 'standalone',
           start_url: base,
+          // Android and desktop show a much richer install prompt when these
+          // exist, and fall back to a bare one-liner when they don't. All three
+          // must share an aspect ratio, and the long side must stay within 2.3x
+          // the short side, or Chrome ignores the lot.
+          screenshots: [
+            {
+              src: `${base}screenshots/shot-1.webp`,
+              sizes: '720x1406',
+              type: 'image/webp',
+              form_factor: 'narrow',
+              label: 'Your list, grouped by store and aisle',
+            },
+            {
+              src: `${base}screenshots/shot-2.webp`,
+              sizes: '720x1406',
+              type: 'image/webp',
+              form_factor: 'narrow',
+              label: 'Shopping mode, showing only what is still needed',
+            },
+            {
+              src: `${base}screenshots/shot-3.webp`,
+              sizes: '720x1406',
+              type: 'image/webp',
+              form_factor: 'narrow',
+              label: 'Finish a trip and send the list on',
+            },
+          ],
           icons: [
             { src: `${base}icons/icon-192.png`, sizes: '192x192', type: 'image/png' },
             { src: `${base}icons/icon-512.png`, sizes: '512x512', type: 'image/png' },
