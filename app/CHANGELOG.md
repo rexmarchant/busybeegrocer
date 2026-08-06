@@ -1,3 +1,23 @@
+# [1.6.0](https://github.com/rexmarchant/busybeegrocer/compare/v1.5.1...v1.6.0) (2026-08-06)
+
+
+### Bug Fixes
+
+* **db:** close open group-join policy and allow account deletion ([7214fa5](https://github.com/rexmarchant/busybeegrocer/commit/7214fa537e371ade2fb23a8279550157ff97a9ea))
+* **pwa:** pin an explicit manifest id so future moves don't orphan installs ([92f40b0](https://github.com/rexmarchant/busybeegrocer/commit/92f40b074a7e19028c345566689b397bca3a3e65))
+* surface failed saves and stop render crashes becoming white screens ([40acebb](https://github.com/rexmarchant/busybeegrocer/commit/40acebb86270dc1c2a4e059fe306fab60331bf03))
+
+
+### Features
+
+* generate the share QR on device instead of baking it into the poster ([a89b335](https://github.com/rexmarchant/busybeegrocer/commit/a89b3358a0e581955d81cbe62ae665d96acdef20))
+* **pwa:** add install screenshots to the manifest ([c051500](https://github.com/rexmarchant/busybeegrocer/commit/c0515008b7c93b8e93ae14a33c1f4d8e6607e726))
+* queue item toggles made offline and replay them on reconnect ([38951d1](https://github.com/rexmarchant/busybeegrocer/commit/38951d142fcf6cbb59e8bc9037fce20bf6b1d2a2))
+* report errors to Sentry ([40e3503](https://github.com/rexmarchant/busybeegrocer/commit/40e350395a4f76943315f5767c3c23e3f0c546ec))
+* require a Turnstile captcha before requesting a sign-in link ([f976359](https://github.com/rexmarchant/busybeegrocer/commit/f97635994a0e7ed5c02ede15af17a6e5306c3690))
+* show a cached copy of the list when reads fail ([e9b5553](https://github.com/rexmarchant/busybeegrocer/commit/e9b555300425812b92bcfceb5123269d5c197998))
+* suggest corrections for mistyped email domains ([10b3533](https://github.com/rexmarchant/busybeegrocer/commit/10b3533a44db5fb173f7bc518b565cccba5a0a21))
+
 ## [1.5.1](https://github.com/rexmarchant/busybeegrocer/compare/v1.5.0...v1.5.1) (2026-08-01)
 
 
