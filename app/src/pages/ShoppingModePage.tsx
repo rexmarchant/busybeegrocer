@@ -19,6 +19,7 @@ import {
   type ViewItem,
 } from '../lib/itemGrouping'
 import { usePersistedState } from '../lib/usePersistedState'
+import { isNetworkFailure, useOfflineQueue } from '../lib/useOfflineQueue'
 import CollapseHeader from '../components/CollapseHeader'
 import Toast, { useToast } from '../components/Toast'
 import type { CatalogItem, Department, ListItem, ShoppingList, Store } from '../types/database'
@@ -69,6 +70,13 @@ export default function ShoppingModePage() {
   const [elapsed, setElapsed] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
   const { toast, showToast, clearToast } = useToast()
+  // Replays anything queued while offline, then re-reads so the screen matches
+  // the server again. loadItems is stable enough for this -- it only reads refs
+  // and state setters.
+  const { pendingCount, queueToggle } = useOfflineQueue(() => {
+    loadItems()
+    showToast('Back online — your changes have been saved')
+  })
   const [ended, setEnded] = useState<{
     completed: boolean
     percent: number
@@ -216,12 +224,18 @@ export default function ShoppingModePage() {
     })
 
     if (error) {
-      // Put it back and say so. Silently reverting is worse than not moving at
-      // all -- you'd walk away believing the item was checked off.
-      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_checked: !nextChecked } : i)))
-      showToast(
-        navigator.onLine ? "Couldn't save that change" : "You're offline — that change didn't save",
-      )
+      if (isNetworkFailure(error)) {
+        // Keep the change and remember to send it. Reverting here would be
+        // technically honest and practically useless: you'd be standing in the
+        // aisle unable to tick anything off until you found signal.
+        queueToggle(item.id, nextChecked)
+        showToast("Offline — saved on your phone, will sync later")
+      } else {
+        // The server refused. This one is never going to land, so put it back
+        // rather than let the list quietly disagree with the server.
+        setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_checked: !nextChecked } : i)))
+        showToast("Couldn't save that change")
+      }
       return
     }
 
@@ -350,6 +364,15 @@ export default function ShoppingModePage() {
         {filterLabel && (
           <p className="mb-3 rounded-xl border border-border bg-surface px-3 py-2 text-xs text-text-secondary">
             🔎 Showing {filterLabel} — change the filter on the list page.
+          </p>
+        )}
+
+        {/* Queued work is otherwise invisible, and "did that save?" is exactly
+            the doubt this whole change exists to remove. */}
+        {pendingCount > 0 && (
+          <p className="mb-3 rounded-xl border border-status-warning/40 bg-status-warning/10 px-3 py-2 text-xs text-text-secondary">
+            ⏳ {pendingCount} change{pendingCount === 1 ? '' : 's'} saved on this phone — they'll sync
+            when you're back online.
           </p>
         )}
 

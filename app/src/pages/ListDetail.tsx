@@ -21,6 +21,7 @@ import {
   type ViewItem,
 } from '../lib/itemGrouping'
 import { usePersistedState } from '../lib/usePersistedState'
+import { isNetworkFailure, useOfflineQueue } from '../lib/useOfflineQueue'
 import CollapseHeader from '../components/CollapseHeader'
 import ConfirmModal from '../components/ConfirmModal'
 import IconPicker from '../components/IconPicker'
@@ -45,6 +46,10 @@ export default function ListDetail() {
   const uiKey = (field: string) => (listId ? `busybeegrocer:listUiState:${listId}:${field}` : null)
   const [sortMode, setSortMode] = usePersistedState<SortMode>(uiKey('sortMode'), 'alphabetical')
   const { toast, showToast, clearToast } = useToast()
+  const { pendingCount, queueToggle } = useOfflineQueue(() => {
+    loadAll()
+    showToast('Back online — your changes have been saved')
+  })
   const [showAddItem, setShowAddItem] = useState(false)
   const [infoItemId, setInfoItemId] = useState<string | null>(null)
   const [removeConfirmItem, setRemoveConfirmItem] = useState<ViewItem | null>(null)
@@ -227,7 +232,8 @@ export default function ListDetail() {
   async function toggleChecked(item: ViewItem) {
     const nextChecked = !item.is_checked
 
-    // Same optimistic treatment as shopping mode -- see ShoppingModePage.toggle.
+    // Same optimistic-then-queue treatment as shopping mode -- see
+    // ShoppingModePage.toggle for the reasoning.
     setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_checked: nextChecked } : i)))
 
     const { error } = await supabase.rpc('toggle_list_item_checked', {
@@ -236,10 +242,13 @@ export default function ListDetail() {
     })
 
     if (error) {
-      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_checked: !nextChecked } : i)))
-      showToast(
-        navigator.onLine ? "Couldn't save that change" : "You're offline — that change didn't save",
-      )
+      if (isNetworkFailure(error)) {
+        queueToggle(item.id, nextChecked)
+        showToast("Offline — saved on your phone, will sync later")
+      } else {
+        setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_checked: !nextChecked } : i)))
+        showToast("Couldn't save that change")
+      }
       return
     }
 
@@ -526,6 +535,15 @@ export default function ListDetail() {
             </button>
           )}
         </div>
+
+        {/* Queued work is otherwise invisible, and "did that save?" is exactly
+            the doubt this whole change exists to remove. */}
+        {pendingCount > 0 && (
+          <p className="mb-3 rounded-xl border border-status-warning/40 bg-status-warning/10 px-3 py-2 text-xs text-text-secondary">
+            ⏳ {pendingCount} change{pendingCount === 1 ? '' : 's'} saved on this phone — they'll sync
+            when you're back online.
+          </p>
+        )}
 
         {showStoreFilter && (
           <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-3">
