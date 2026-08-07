@@ -1,3 +1,10 @@
+## [1.7.1](https://github.com/rexmarchant/busybeegrocer/compare/v1.7.0...v1.7.1) (2026-08-07)
+
+
+### Bug Fixes
+
+* stop the invite screen implying an email was sent ([4597ea4](https://github.com/rexmarchant/busybeegrocer/commit/4597ea4a5f2996c9356452f4da42b64d5b21b6f9))
+
 # [1.7.0](https://github.com/rexmarchant/busybeegrocer/compare/v1.6.4...v1.7.0) (2026-08-07)
 
 
