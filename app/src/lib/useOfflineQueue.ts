@@ -16,6 +16,14 @@ export function isNetworkFailure(error: unknown): boolean {
 }
 
 async function sendMutation(mutation: QueuedMutation): Promise<{ error: unknown }> {
+  if (mutation.kind === 'endSession') {
+    const { error } = await supabase.rpc('end_shopping_session', {
+      p_session_id: mutation.sessionId,
+      p_completed: mutation.completed,
+    })
+    return { error }
+  }
+
   const { error } = await supabase.rpc('toggle_list_item_checked', {
     p_item_id: mutation.itemId,
     p_checked: mutation.checked,
@@ -73,5 +81,23 @@ export function useOfflineQueue(onFlushed?: () => void) {
     setPendingCount(next.length)
   }, [])
 
-  return { pendingCount, queueToggle, flushNow }
+  /** Queued so a trip finished with no signal still reaches the server. Without
+   * it the session row stays open forever and "re-add last trip" loses that
+   * trip, because it reads the snapshot end_shopping_session takes.
+   *
+   * The replay recomputes checked_item_count from the list as it stands when it
+   * lands rather than when you finished. In practice that's moments later and
+   * identical; it would only differ if someone edited the list in between. */
+  const queueSessionEnd = useCallback((sessionId: string, completed: boolean) => {
+    const next = enqueue(loadQueue(), {
+      kind: 'endSession',
+      sessionId,
+      completed,
+      queuedAt: Date.now(),
+    })
+    saveQueue(next)
+    setPendingCount(next.length)
+  }, [])
+
+  return { pendingCount, queueToggle, queueSessionEnd, flushNow }
 }

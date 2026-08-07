@@ -22,21 +22,39 @@ export interface QueuedToggle {
   queuedAt: number
 }
 
-export type QueuedMutation = QueuedToggle
+/** Ending a trip is a write like any other, and it used to be lost entirely
+ * when the network was down -- which silently broke "re-add last trip", since
+ * that reads the snapshot end_shopping_session takes. */
+export interface QueuedSessionEnd {
+  kind: 'endSession'
+  sessionId: string
+  completed: boolean
+  queuedAt: number
+}
 
-/** Adds an operation, superseding any pending one for the same item.
+export type QueuedMutation = QueuedToggle | QueuedSessionEnd
+
+/** What makes two queued operations "the same thing", for superseding. */
+function identityOf(mutation: QueuedMutation): string {
+  return mutation.kind === 'toggleChecked'
+    ? `toggle:${mutation.itemId}`
+    : `endSession:${mutation.sessionId}`
+}
+
+/** Adds an operation, superseding any pending one for the same target.
  *
- * Only the latest intent per item is worth sending: the RPC sets absolute
- * state rather than applying a delta, so replaying an older value for the same
- * item could only ever be wrong. This also keeps the queue bounded when someone
- * taps a row repeatedly.
+ * Only the latest intent per target is worth sending: these RPCs set absolute
+ * state rather than applying a delta, so replaying an older value could only
+ * ever be wrong. It also keeps the queue bounded when someone taps a row
+ * repeatedly.
  *
  * The trade-off: a check-then-uncheck done entirely offline arrives as a single
  * transition, so the lifetime tallies record one change rather than two. The
  * tallies are a statistic; the checkbox state is what people actually rely on. */
 export function enqueue(queue: QueuedMutation[], mutation: QueuedMutation): QueuedMutation[] {
-  const withoutItem = queue.filter((m) => m.itemId !== mutation.itemId)
-  const next = [...withoutItem, mutation]
+  const id = identityOf(mutation)
+  const withoutSameTarget = queue.filter((m) => identityOf(m) !== id)
+  const next = [...withoutSameTarget, mutation]
   return next.length > MAX_QUEUED ? next.slice(next.length - MAX_QUEUED) : next
 }
 

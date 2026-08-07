@@ -23,9 +23,35 @@ function RequireAuth({ children }: { children: ReactNode }) {
 }
 
 function RequireGroup({ children }: { children: ReactNode }) {
-  const { groups, loading } = useGroup()
+  const { groups, loading, loadFailed, refreshGroups } = useGroup()
   if (loading) return <FullScreenLoading />
-  if (groups.length === 0) return <Navigate to="/group-setup" replace />
+
+  if (groups.length === 0) {
+    // No groups *and* the read failed means "we don't know", not "you have
+    // none". Sending someone to Create-a-group here is wrong and useless --
+    // creating one needs the network too. This is what a reload with no signal
+    // used to do, mid-shop.
+    if (loadFailed) {
+      return (
+        <div className="flex min-h-svh flex-1 flex-col items-center justify-center gap-4 bg-page px-6 text-center">
+          <p className="text-4xl">📴</p>
+          <h1 className="text-lg font-semibold text-text-primary">You're offline</h1>
+          <p className="max-w-sm text-sm text-text-secondary">
+            Your lists are saved, but we can't reach the server to load them right now. They'll be
+            here as soon as you have signal again.
+          </p>
+          <button
+            onClick={() => refreshGroups()}
+            className="mt-2 rounded-xl bg-primary px-6 py-3 font-medium text-white"
+          >
+            Try again
+          </button>
+        </div>
+      )
+    }
+    return <Navigate to="/group-setup" replace />
+  }
+
   return <>{children}</>
 }
 

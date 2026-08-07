@@ -32,8 +32,8 @@ const SHOP_SORT_LABELS: Record<Exclude<SortMode, 'favorites'>, string> = {
   store_category: 'Store + Category',
 }
 
-function sessionItemsKey(sessionId: string) {
-  return `busybeegrocer:sessionItems:${sessionId}`
+function sessionItemsKey(sessionId: string | null) {
+  return `busybeegrocer:sessionItems:${sessionId ?? 'local'}`
 }
 
 export default function ShoppingModePage() {
@@ -80,7 +80,7 @@ export default function ShoppingModePage() {
   // Replays anything queued while offline, then re-reads so the screen matches
   // the server again. loadItems is stable enough for this -- it only reads refs
   // and state setters.
-  const { pendingCount, queueToggle } = useOfflineQueue(() => {
+  const { pendingCount, queueToggle, queueSessionEnd } = useOfflineQueue(() => {
     loadItems()
     showToast('Back online — your changes have been saved')
   })
@@ -132,19 +132,24 @@ export default function ShoppingModePage() {
     const { data: listData } = await supabase.from('lists').select('*').eq('id', listId).single()
     if (listData) setList(listData as ShoppingList)
 
-    let activeSessionId: string
-    let activeStartedAt: number
+    const resuming = activeSession?.listId === listId
+    let activeSessionId: string | null = resuming ? activeSession.sessionId : null
+    // Keep the original start time when resuming, so pausing doesn't reset the
+    // timer -- including when we're only resuming to repair a broken session.
+    const activeStartedAt = resuming ? activeSession.startedAt : Date.now()
 
-    if (activeSession && activeSession.listId === listId) {
-      // Resuming a session that was paused, not ended.
-      activeSessionId = activeSession.sessionId
-      activeStartedAt = activeSession.startedAt
-    } else {
+    // Start a server session when we don't have one. That covers a fresh trip,
+    // and also repairs a trip that began with no signal and was stored with a
+    // null id -- which previously left it permanently unfinishable.
+    if (!activeSessionId) {
       const { data: sessionIdData } = await supabase.rpc('start_shopping_session', {
         p_list_id: listId,
       })
-      activeSessionId = sessionIdData as string
-      activeStartedAt = Date.now()
+      activeSessionId = (sessionIdData as string | null) ?? null
+      // Persist either way. A null id means "local-only trip": the timer, the
+      // item tracking and finishing all still work, there is simply no server
+      // row yet. What must never happen again is pretending the trip cannot be
+      // ended just because the server never heard about it.
       startSession(listId, activeSessionId, activeStartedAt)
     }
 
@@ -291,11 +296,23 @@ export default function ShoppingModePage() {
   }
 
   async function finish(completed: boolean, currentItems: ViewItem[]) {
+    // Never bail out early. Whether or not the server knows about this trip,
+    // the person standing in the shop has finished it and must be able to say
+    // so -- returning here is what made "Finished shopping" a dead button.
     const currentSessionId = sessionIdRef.current
-    if (!currentSessionId) return
     if (intervalRef.current) window.clearInterval(intervalRef.current)
     const seconds = startedAtRef.current ? Math.floor((Date.now() - startedAtRef.current) / 1000) : 0
-    await supabase.rpc('end_shopping_session', { p_session_id: currentSessionId, p_completed: completed })
+
+    if (currentSessionId) {
+      const { error } = await supabase.rpc('end_shopping_session', {
+        p_session_id: currentSessionId,
+        p_completed: completed,
+      })
+      // Queue it rather than lose it: an unended session never gets its item
+      // snapshot, which is what "re-add last trip" reads.
+      if (error && isNetworkFailure(error)) queueSessionEnd(currentSessionId, completed)
+    }
+
     clearSession()
     localStorage.removeItem(sessionItemsKey(currentSessionId))
 

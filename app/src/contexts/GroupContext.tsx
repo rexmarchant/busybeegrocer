@@ -4,11 +4,39 @@ import type { Group } from '../types/database'
 import { useAuth } from './AuthContext'
 
 const CURRENT_GROUP_KEY = 'busybeegrocer:currentGroupId'
+const GROUPS_CACHE_KEY = 'busybeegrocer:groupsCache'
+
+/** Your groups, remembered across reloads.
+ *
+ * Without this, a reload with no signal left `groups` empty, which RequireGroup
+ * could not tell apart from "this person has no groups" -- so it redirected to
+ * Create-a-group, which is both wrong and useless offline. */
+function readCachedGroups(): Group[] {
+  try {
+    const raw = localStorage.getItem(GROUPS_CACHE_KEY)
+    const parsed: unknown = raw ? JSON.parse(raw) : null
+    return Array.isArray(parsed) ? (parsed as Group[]) : []
+  } catch {
+    return []
+  }
+}
+
+function writeCachedGroups(groups: Group[]) {
+  try {
+    if (groups.length === 0) localStorage.removeItem(GROUPS_CACHE_KEY)
+    else localStorage.setItem(GROUPS_CACHE_KEY, JSON.stringify(groups))
+  } catch {
+    // Full or unavailable storage: degrade to the old behaviour, don't throw.
+  }
+}
 
 interface GroupContextValue {
   groups: Group[]
   currentGroup: Group | null
   loading: boolean
+  /** True when the last attempt to read groups failed. Lets callers tell
+   * "you have no groups" apart from "we couldn't find out". */
+  loadFailed: boolean
   setCurrentGroupId: (id: string) => void
   createGroup: (name: string) => Promise<Group>
   refreshGroups: () => Promise<void>
@@ -17,16 +45,21 @@ interface GroupContextValue {
 const GroupContext = createContext<GroupContextValue | undefined>(undefined)
 
 export function GroupProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth()
-  const [groups, setGroups] = useState<Group[]>([])
+  const { user, loading: authLoading } = useAuth()
+  const [groups, setGroups] = useState<Group[]>(readCachedGroups)
   const [currentGroupId, setCurrentGroupIdState] = useState<string | null>(
     () => localStorage.getItem(CURRENT_GROUP_KEY),
   )
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
 
   const refreshGroups = useCallback(async () => {
     if (!user) {
       setGroups([])
+      // Only wipe the cache once auth has actually resolved to "signed out" --
+      // `user` is briefly null while the session is being restored, and
+      // clearing here would throw away the cache on every cold start.
+      if (!authLoading) writeCachedGroups([])
       setLoading(false)
       return
     }
@@ -38,12 +71,19 @@ export function GroupProvider({ children }: { children: ReactNode }) {
       .order('created_at', { ascending: true })
 
     if (!error && data) {
-      setGroups(data as unknown as Group[])
+      const fresh = data as unknown as Group[]
+      setGroups(fresh)
+      writeCachedGroups(fresh)
+      setLoadFailed(false)
     } else if (error) {
+      // Keep whatever we already have. Replacing a known-good list with an
+      // empty one because the network blinked is how a reload in a shop ended
+      // up on the Create-a-group screen.
       console.error('refreshGroups failed:', error)
+      setLoadFailed(true)
     }
     setLoading(false)
-  }, [user])
+  }, [user, authLoading])
 
   useEffect(() => {
     refreshGroups()
@@ -78,7 +118,7 @@ export function GroupProvider({ children }: { children: ReactNode }) {
 
   return (
     <GroupContext.Provider
-      value={{ groups, currentGroup, loading, setCurrentGroupId, createGroup, refreshGroups }}
+      value={{ groups, currentGroup, loading, loadFailed, setCurrentGroupId, createGroup, refreshGroups }}
     >
       {children}
     </GroupContext.Provider>
