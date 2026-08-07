@@ -1,3 +1,10 @@
+## [1.7.2](https://github.com/rexmarchant/busybeegrocer/compare/v1.7.1...v1.7.2) (2026-08-07)
+
+
+### Bug Fixes
+
+* explain why an invite can't be accepted instead of hanging on "Joining..." ([5a29659](https://github.com/rexmarchant/busybeegrocer/commit/5a296594d13f300bec69d562b6a2cb18bbc6560b))
+
 ## [1.7.1](https://github.com/rexmarchant/busybeegrocer/compare/v1.7.0...v1.7.1) (2026-08-07)
 
 
