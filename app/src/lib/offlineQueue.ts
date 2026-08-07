@@ -23,8 +23,8 @@ export interface QueuedToggle {
 }
 
 /** Ending a trip is a write like any other, and it used to be lost entirely
- * when the network was down -- which silently broke "re-add last trip", since
- * that reads the snapshot end_shopping_session takes. */
+ * when the network was down -- leaving the session row open forever, so the
+ * trip's duration and outcome were never recorded. */
 export interface QueuedSessionEnd {
   kind: 'endSession'
   sessionId: string

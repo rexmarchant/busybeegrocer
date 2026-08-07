@@ -81,9 +81,9 @@ export function useOfflineQueue(onFlushed?: () => void) {
     setPendingCount(next.length)
   }, [])
 
-  /** Queued so a trip finished with no signal still reaches the server. Without
-   * it the session row stays open forever and "re-add last trip" loses that
-   * trip, because it reads the snapshot end_shopping_session takes.
+  /** Queued so a trip finished with no signal still reaches the server.
+   * Otherwise the session row stays open forever and the trip's duration and
+   * outcome are never recorded.
    *
    * The replay recomputes checked_item_count from the list as it stands when it
    * lands rather than when you finished. In practice that's moments later and

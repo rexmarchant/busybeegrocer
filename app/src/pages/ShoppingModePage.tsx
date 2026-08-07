@@ -97,20 +97,26 @@ export default function ShoppingModePage() {
   // e.g. right after the page reloads coming back from the mail app.
   const sessionIdRef = useRef<string | null>(null)
   const startedAtRef = useRef<number | null>(null)
+  // Deliberately survives effect cleanup, so concurrent init() runs share one
+  // start_shopping_session request rather than each creating a session row.
+  const sessionStartRef = useRef<Promise<string | null> | null>(null)
   // Ids of items that were ever "still needed" during this session — i.e. what
   // this trip was actually shopping for, as opposed to the whole list (which
   // may include items already checked off before this session even started).
   // Persisted to localStorage too, so a page reload mid-session doesn't lose it.
   const sessionItemIdsRef = useRef<Set<string>>(new Set())
 
+  // Keyed on the group *id*, not the group object: refetching groups produces
+  // new objects, which would re-run this for no reason.
+  const currentGroupId = currentGroup?.id
   useEffect(() => {
-    if (!listId || !currentGroup) return
+    if (!listId || !currentGroupId) return
     init()
     return () => {
       if (intervalRef.current) window.clearInterval(intervalRef.current)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listId, currentGroup])
+  }, [listId, currentGroupId])
 
   async function init() {
     if (!listId || !currentGroup) return
@@ -144,6 +150,10 @@ export default function ShoppingModePage() {
     // requests can hang for a long time with no signal, and the timer used to
     // sit at 0:00 until they failed -- or forever, if they never did.
     startedAtRef.current = activeStartedAt
+    // init() can legitimately run more than once for the same trip (see the
+    // session guard below); without this each run would leave another interval
+    // ticking.
+    if (intervalRef.current) window.clearInterval(intervalRef.current)
     const tick = () => setElapsed(Math.floor((Date.now() - activeStartedAt) / 1000))
     tick()
     intervalRef.current = window.setInterval(tick, 1000)
@@ -159,10 +169,24 @@ export default function ShoppingModePage() {
     // and also repairs a trip that began with no signal and was stored with a
     // null id -- which previously left it permanently unfinishable.
     if (!activeSessionId) {
-      const { data: sessionIdData } = await supabase.rpc('start_shopping_session', {
-        p_list_id: listId,
-      })
-      activeSessionId = (sessionIdData as string | null) ?? null
+      // Share one in-flight request between concurrent init() runs.
+      //
+      // init() runs more than once for a single trip: React StrictMode
+      // double-invokes effects in development, and the effect keys off
+      // currentGroup, whose object identity changes whenever groups are
+      // refetched. Each run used to fire its own start_shopping_session, which
+      // is why entering shopping mode produced sessions in pairs milliseconds
+      // apart -- rows that are then never ended, because only one of them is
+      // the trip anybody is actually on. Awaiting a shared promise means one
+      // request, one row, and the same id handed to every caller.
+      if (!sessionStartRef.current) {
+        sessionStartRef.current = (async () => {
+          const { data } = await supabase.rpc('start_shopping_session', { p_list_id: listId })
+          return (data as string | null) ?? null
+        })()
+      }
+      activeSessionId = await sessionStartRef.current
+
       // Persist either way. A null id means "local-only trip": the timer, the
       // item tracking and finishing all still work, there is simply no server
       // row yet. What must never happen again is pretending the trip cannot be
@@ -324,8 +348,8 @@ export default function ShoppingModePage() {
         p_session_id: currentSessionId,
         p_completed: completed,
       })
-      // Queue it rather than lose it: an unended session never gets its item
-      // snapshot, which is what "re-add last trip" reads.
+      // Queue it rather than lose it: an unended session stays open forever,
+      // so the trip's duration and outcome are never recorded.
       if (error && isNetworkFailure(error)) queueSessionEnd(currentSessionId, completed)
     }
 
