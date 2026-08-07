@@ -1,3 +1,10 @@
+## [1.6.2](https://github.com/rexmarchant/busybeegrocer/compare/v1.6.1...v1.6.2) (2026-08-07)
+
+
+### Bug Fixes
+
+* don't send people to Create-your-group on an offline reload ([534982d](https://github.com/rexmarchant/busybeegrocer/commit/534982d49963df29cfc72b3a96ec188ba638a151))
+
 ## [1.6.1](https://github.com/rexmarchant/busybeegrocer/compare/v1.6.0...v1.6.1) (2026-08-07)
 
 
