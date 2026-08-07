@@ -1,3 +1,10 @@
+## [1.8.1](https://github.com/rexmarchant/busybeegrocer/compare/v1.8.0...v1.8.1) (2026-08-07)
+
+
+### Bug Fixes
+
+* header no longer overflows once a group switcher appears ([8063d4b](https://github.com/rexmarchant/busybeegrocer/commit/8063d4b91f1e2d7ee2f8eff452362ae5ca7bed75))
+
 # [1.8.0](https://github.com/rexmarchant/busybeegrocer/compare/v1.7.2...v1.8.0) (2026-08-07)
 
 
