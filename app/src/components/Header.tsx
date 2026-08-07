@@ -85,33 +85,47 @@ export default function Header() {
   // On Settings itself the gear would just link to the page you're already on,
   // so it reads as a dead button. Sub-pages keep it — there it navigates up.
   const onSettingsPage = location.pathname === '/settings'
+  const hasSwitcher = groups.length > 1 && !!currentGroup
 
   return (
     <div className="sticky top-0 z-10">
       <ResumeShoppingBanner />
-      <header className="flex items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3">
-        <Link to="/about" className="flex items-center gap-2">
-          <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" className="h-11 w-11 rounded-lg" />
-          <span className="font-semibold text-text-primary">BusyBeeGrocer</span>
+      {/* Every child used to be fixed-width with nothing allowed to shrink, so
+          on a phone the row simply overflowed: the wordmark was clipped
+          mid-letter, the group name ran off the edge, and the settings gear --
+          last in the row -- was pushed off screen entirely. */}
+      <header className="flex items-center gap-2 border-b border-border bg-surface px-3 py-3">
+        <Link to="/about" className="flex shrink-0 items-center gap-2">
+          <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" className="h-10 w-10 rounded-lg" />
+          {/* With a group switcher present there is no room for the wordmark on
+              a phone, and the icon identifies the app perfectly well. */}
+          <span
+            className={`font-semibold text-text-primary ${hasSwitcher ? 'hidden sm:inline' : ''}`}
+          >
+            BusyBeeGrocer
+          </span>
         </Link>
 
-        <div className="flex items-center gap-3">
+        <div className="ml-auto flex min-w-0 items-center gap-2">
           {!online && (
-            <span className="rounded-full bg-status-warning/20 px-3 py-1 text-xs font-medium text-status-warning">
+            <span className="shrink-0 rounded-full bg-status-warning/20 px-2.5 py-1 text-xs font-medium whitespace-nowrap text-status-warning">
               ● Offline
             </span>
           )}
           {itemCount !== null && (
-            <span className="rounded-full bg-page px-3 py-1 text-sm font-medium text-text-secondary">
+            <span className="shrink-0 rounded-full bg-page px-3 py-1 text-sm font-medium whitespace-nowrap text-text-secondary">
               {itemCount} item{itemCount === 1 ? '' : 's'}
             </span>
           )}
 
           {groups.length > 1 && currentGroup && (
+            // The one element allowed to give: group names are arbitrary and
+            // can be long, so this truncates instead of shoving the gear out.
             <select
               value={currentGroup.id}
               onChange={(e) => setCurrentGroupId(e.target.value)}
-              className="rounded-lg border border-border bg-surface px-2 py-1 text-sm text-text-primary"
+              aria-label="Current group"
+              className="min-w-0 max-w-[10rem] flex-1 truncate rounded-lg border border-border bg-surface px-2 py-1 text-sm text-text-primary"
             >
               {groups.map((g) => (
                 <option key={g.id} value={g.id}>
@@ -125,7 +139,7 @@ export default function Header() {
             <Link
               to="/settings"
               aria-label="Settings"
-              className="rounded-full p-2 text-xl text-text-secondary hover:bg-page"
+              className="shrink-0 rounded-full p-1.5 text-xl text-text-secondary hover:bg-page"
             >
               ⚙️
             </Link>
