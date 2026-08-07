@@ -36,7 +36,7 @@ const EMPTY_SECTION_SET = new Set<string>()
 export default function ListDetail() {
   const { listId } = useParams<{ listId: string }>()
   const { user } = useAuth()
-  const { currentGroup } = useGroup()
+  const { currentGroup, groups } = useGroup()
   const { activeSession } = useShoppingSession()
   const navigate = useNavigate()
   const { members } = useGroupMembers(currentGroup?.id)
@@ -397,6 +397,12 @@ export default function ListDetail() {
     <div className="flex min-h-svh flex-1 flex-col bg-page">
       <Toast toast={toast} onDismiss={clearToast} />
       <header className="sticky top-0 z-10 border-b border-border bg-surface px-4 py-3" style={{ borderTop: `4px solid ${color}` }}>
+        {/* Only when there's more than one group to confuse it with. Two groups
+            can each hold a "Weekly Shopping", and without this nothing on the
+            screen says which one you're adding to. */}
+        {groups.length > 1 && currentGroup && (
+          <p className="mx-auto mb-1 max-w-2xl text-xs text-text-muted">{currentGroup.name}</p>
+        )}
         <div className="mx-auto flex max-w-2xl items-center gap-3">
           <Link to="/" className="shrink-0 text-2xl text-text-secondary">
             ←

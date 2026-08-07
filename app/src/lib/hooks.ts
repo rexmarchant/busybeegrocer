@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
-import type { Profile } from '../types/database'
+import type { GroupMemberProfile, GroupRole, Profile } from '../types/database'
 
 export function useGroupMembers(groupId: string | undefined) {
-  const [members, setMembers] = useState<Profile[]>([])
+  const [members, setMembers] = useState<GroupMemberProfile[]>([])
   const [loading, setLoading] = useState(true)
 
   async function refetch() {
     if (!groupId) return
     setLoading(true)
-    const { data } = await supabase.from('group_members').select('profiles(*)').eq('group_id', groupId)
-    const profiles = (data ?? []).flatMap((row) => (row.profiles ? [row.profiles] : []))
-    setMembers(profiles as unknown as Profile[])
+    const { data } = await supabase
+      .from('group_members')
+      .select('role, profiles(*)')
+      .eq('group_id', groupId)
+    const rows = (data ?? []) as unknown as { role: GroupRole; profiles: Profile | null }[]
+    setMembers(rows.flatMap((row) => (row.profiles ? [{ ...row.profiles, role: row.role }] : [])))
     setLoading(false)
   }
 

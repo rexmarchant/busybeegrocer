@@ -39,7 +39,7 @@ function sessionItemsKey(sessionId: string | null) {
 
 export default function ShoppingModePage() {
   const { listId } = useParams<{ listId: string }>()
-  const { currentGroup } = useGroup()
+  const { currentGroup, groups } = useGroup()
   const { activeSession, startSession, clearSession } = useShoppingSession()
   const navigate = useNavigate()
 
@@ -424,6 +424,12 @@ export default function ShoppingModePage() {
       <header className="sticky top-0 z-10 px-4 py-4 text-white" style={{ backgroundColor: color }}>
         <div className="mx-auto flex max-w-2xl items-center justify-between">
           <div>
+            {/* Only when there's more than one group to confuse it with. Two
+                groups can hold lists with the same name, and nothing else on
+                this screen says which one you're shopping for. */}
+            {groups.length > 1 && currentGroup && (
+              <p className="text-xs opacity-75">{currentGroup.name}</p>
+            )}
             <p className="text-sm opacity-90">
               {listIconEmoji(list.icon)} {list.name}
             </p>

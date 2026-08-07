@@ -6,7 +6,7 @@ import { useGroup } from '../contexts/GroupContext'
 import { useGroupMembers } from '../lib/hooks'
 import { suggestEmailCorrection } from '../lib/emailTypos'
 import ConfirmModal from '../components/ConfirmModal'
-import type { Invite, Profile } from '../types/database'
+import type { GroupRole, Invite, Profile } from '../types/database'
 
 export default function GroupSettings() {
   const { user } = useAuth()
@@ -48,7 +48,34 @@ export default function GroupSettings() {
   }
   const [removeTarget, setRemoveTarget] = useState<Profile | null>(null)
 
-  const isGroupOwner = currentGroup?.created_by === user?.id
+  // Ownership is the role held in *this* group, not groups.created_by -- which
+  // is now only a record of who made it. Someone can own one group and simply
+  // belong to another.
+  const myRole = members.find((m) => m.id === user?.id)?.role
+  const isGroupOwner = myRole === 'owner'
+  const ownerCount = members.filter((m) => m.role === 'owner').length
+
+  const [roleBusyFor, setRoleBusyFor] = useState<string | null>(null)
+  const [roleError, setRoleError] = useState<string | null>(null)
+
+  async function changeRole(userId: string, role: GroupRole) {
+    if (!currentGroup) return
+    setRoleBusyFor(userId)
+    setRoleError(null)
+    const { error } = await supabase.rpc('set_group_member_role', {
+      p_group_id: currentGroup.id,
+      p_user_id: userId,
+      p_role: role,
+    })
+    setRoleBusyFor(null)
+    // The database enforces these rules regardless of what the UI offers, so
+    // surface what it said rather than a generic failure.
+    if (error) {
+      setRoleError(error.message)
+      return
+    }
+    await refetchMembers()
+  }
 
   useEffect(() => {
     if (!currentGroup) return
@@ -177,26 +204,66 @@ export default function GroupSettings() {
           <ul className="mb-6 flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
             {!membersLoading &&
               members.map((m) => (
-                <li key={m.id} className="flex items-center justify-between px-4 py-3">
+                <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
                   <span className="text-text-primary">
                     {m.display_name || m.email} {m.id === user?.id && '(you)'}
-                    {m.id === currentGroup.created_by && (
+                    {m.role === 'owner' && (
                       <span className="ml-2 rounded-full bg-page px-2 py-0.5 text-xs text-text-muted">
                         Owner
                       </span>
                     )}
                   </span>
-                  {isGroupOwner && m.id !== user?.id && (
-                    <button
-                      onClick={() => setRemoveTarget(m)}
-                      className="text-sm text-status-critical underline"
-                    >
-                      Remove
-                    </button>
+
+                  {isGroupOwner && (
+                    <span className="flex items-center gap-3">
+                      {m.role === 'member' ? (
+                        <button
+                          onClick={() => changeRole(m.id, 'owner')}
+                          disabled={roleBusyFor === m.id}
+                          className="text-sm text-primary underline disabled:opacity-50"
+                        >
+                          Make owner
+                        </button>
+                      ) : (
+                        // Hidden rather than disabled when this is the last
+                        // owner: the database refuses it anyway, and offering a
+                        // button that can only fail is worse than not offering
+                        // one.
+                        ownerCount > 1 && (
+                          <button
+                            onClick={() => changeRole(m.id, 'member')}
+                            disabled={roleBusyFor === m.id}
+                            className="text-sm text-text-secondary underline disabled:opacity-50"
+                          >
+                            {m.id === user?.id ? 'Step down' : 'Remove owner'}
+                          </button>
+                        )
+                      )}
+
+                      {m.id !== user?.id && (
+                        <button
+                          onClick={() => setRemoveTarget(m)}
+                          className="text-sm text-status-critical underline"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </span>
                   )}
                 </li>
               ))}
           </ul>
+
+          {roleError && <p className="-mt-4 mb-4 text-sm text-status-critical">{roleError}</p>}
+
+          {/* Leaving is never blocked -- the group promotes a successor -- but
+              being told in advance beats discovering it afterwards. */}
+          {isGroupOwner && ownerCount === 1 && members.length > 1 && (
+            <p className="-mt-4 mb-6 text-xs text-text-muted">
+              You're the only owner. If you leave, the longest-standing member becomes owner
+              automatically — or make someone an owner first to choose who.
+            </p>
+          )}
 
           <h2 className="mb-2 text-sm font-medium text-text-secondary">Invite someone</h2>
           <form onSubmit={handleInvite} className="mb-2 flex gap-2">

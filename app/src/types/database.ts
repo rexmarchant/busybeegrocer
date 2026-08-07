@@ -33,14 +33,30 @@ export interface Profile {
 export interface Group {
   id: string
   name: string
+  /** Who created the group. Attribution only -- ownership lives on
+   * group_members.role, and a group may have several owners. */
   created_by: string
   created_at: string
 }
 
+export type GroupRole = 'owner' | 'member'
+
+/** The group_members row itself. */
 export interface GroupMember {
   group_id: string
   user_id: string
   joined_at: string
+  role: GroupRole
+}
+
+/** A person in a group, joined to their profile, carrying the role they hold
+ * *in that group*. Someone can own one group and simply belong to another.
+ *
+ * Named apart from GroupMember on purpose: TypeScript merges same-named
+ * interfaces silently, so declaring both as GroupMember produced one type
+ * demanding every field of each. */
+export interface GroupMemberProfile extends Profile {
+  role: GroupRole
 }
 
 export interface Invite {
