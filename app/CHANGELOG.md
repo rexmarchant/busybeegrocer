@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/rexmarchant/busybeegrocer/compare/v1.7.2...v1.8.0) (2026-08-07)
+
+
+### Features
+
+* group roles, with co-owners, and show which group you're in ([7d1ed87](https://github.com/rexmarchant/busybeegrocer/commit/7d1ed87376fdbc4e06a42566d3f2c75ca611fac3))
+
 ## [1.7.2](https://github.com/rexmarchant/busybeegrocer/compare/v1.7.1...v1.7.2) (2026-08-07)
 
 
