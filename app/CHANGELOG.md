@@ -1,3 +1,10 @@
+## [1.6.4](https://github.com/rexmarchant/busybeegrocer/compare/v1.6.3...v1.6.4) (2026-08-07)
+
+
+### Bug Fixes
+
+* stop entering shopping mode creating two sessions ([7e12dc5](https://github.com/rexmarchant/busybeegrocer/commit/7e12dc5f6758b7caca4b45de6954e8ab91b1b32d))
+
 ## [1.6.3](https://github.com/rexmarchant/busybeegrocer/compare/v1.6.2...v1.6.3) (2026-08-07)
 
 
