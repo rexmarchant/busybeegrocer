@@ -9,15 +9,27 @@ const pkg = JSON.parse(readFileSync(fileURLToPath(new URL('./package.json', impo
 
 // https://vite.dev/config/
 export default defineConfig(({ command }) => {
-  // Served from https://rexmarchant.github.io/busybeegrocer/ in production;
-  // local dev stays at the site root.
-  const base = command === 'build' ? '/busybeegrocer/' : '/'
+  // The app lives under /app/ on busybeegrocer.com, leaving the root for the
+  // landing page. Local dev stays at the site root.
+  //
+  // Everything downstream reads import.meta.env.BASE_URL rather than hardcoding
+  // a path -- the router basename, every asset URL, the manifest, the magic-link
+  // redirect and the share QR -- so this one line moves the whole app.
+  const base = command === 'build' ? '/app/' : '/'
 
   return {
     base,
     // PRIVACY.md lives at the repo root, one level above Vite's root, and the
     // app imports it with ?raw so the policy exists in exactly one place.
     server: { fs: { allow: ['..'] } },
+    build: {
+      // Built into the deploy directory at the path it will be served from, so
+      // the landing page can occupy the root alongside it. emptyOutDir is
+      // explicit because the target sits outside Vite's root, and it clears
+      // only dist/app -- the landing page copied to dist/ is untouched.
+      outDir: '../dist/app',
+      emptyOutDir: true,
+    },
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),
       __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
@@ -35,18 +47,17 @@ export default defineConfig(({ command }) => {
           name: 'BusyBeeGrocer',
           short_name: 'BusyBeeGrocer',
           description: 'Shared shopping lists for your group.',
-          // Without an explicit id, a PWA's identity defaults to its start_url,
-          // which means changing start_url orphans every existing install.
-          // Setting it to `base` resolves to exactly the same value the implicit
-          // id has today ('/busybeegrocer/', trailing slash included), so nobody
-          // currently running the installed app is affected -- while making the
-          // identity explicit from here on.
+          // A fixed string, deliberately not `base`.
           //
-          // NOTE for the busybeegrocer.com move: identity is scoped to the
-          // origin, so a domain change orphans installs regardless and everyone
-          // reinstalls once. At that point pin this to a permanent value that
-          // does NOT track `base`, so any future path change is survivable.
-          id: base,
+          // A PWA's identity is its origin plus this id. Moving to
+          // busybeegrocer.com changes the origin, so every existing install
+          // orphans and everyone reinstalls once -- unavoidable, and the reason
+          // the domain, the /app split and the host move all ship together.
+          //
+          // Pinning it here means that is the *last* time. Because this no
+          // longer tracks the served path, the app could later move to the root
+          // or to another folder and installed copies would follow it.
+          id: '/busybeegrocer',
           categories: ['shopping', 'lifestyle', 'productivity'],
           theme_color: '#2a78d6',
           background_color: '#fcfcfb',

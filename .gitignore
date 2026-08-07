@@ -5,6 +5,10 @@
 .DS_Store
 Thumbs.db
 
+# Assembled deploy directory: the built app (dist/app, written by Vite) plus the
+# landing page copied over it. Produced by CI, never committed.
+/dist/
+
 # Master video recordings — far too big for GitHub (100MB/file hard limit).
 # The web-encoded copy that actually ships lives in app/public/video/.
 assets/video/
