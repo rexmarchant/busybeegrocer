@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/rexmarchant/busybeegrocer/compare/v1.6.4...v1.7.0) (2026-08-07)
+
+
+### Features
+
+* add the delete-account edge function ([872b885](https://github.com/rexmarchant/busybeegrocer/commit/872b88553a805d043b67000d3db45c47fbdef868))
+
 ## [1.6.4](https://github.com/rexmarchant/busybeegrocer/compare/v1.6.3...v1.6.4) (2026-08-07)
 
 
