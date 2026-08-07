@@ -13,7 +13,7 @@ interface Preview {
 
 export default function AcceptInvite() {
   const { inviteId } = useParams<{ inviteId: string }>()
-  const { session, requestLoginLink, verifyOtpCode } = useAuth()
+  const { session, user, signOut, requestLoginLink, verifyOtpCode } = useAuth()
   const { setCurrentGroupId, refreshGroups } = useGroup()
   const navigate = useNavigate()
 
@@ -67,8 +67,21 @@ export default function AcceptInvite() {
     navigate('/', { replace: true })
   }
 
+  /** Signed in, but as somebody other than the person invited.
+   *
+   * accept_invite() matches on the address, so this can never succeed. Checking
+   * here rather than letting the RPC refuse means we can say something useful
+   * instead of surfacing a raw database error. */
+  const wrongAccount =
+    !!session &&
+    !!preview &&
+    !!user?.email &&
+    preview.status === 'pending' &&
+    user.email.toLowerCase() !== preview.email.toLowerCase()
+
   useEffect(() => {
     if (!session || !preview) return
+    if (wrongAccount) return
     if (preview.status === 'pending') {
       acceptInvite()
     } else if (preview.status === 'accepted') {
@@ -128,6 +141,57 @@ export default function AcceptInvite() {
   }
   if (preview.status !== 'pending' && preview.status !== 'accepted') {
     return <Centered>This invite is no longer valid.</Centered>
+  }
+
+  // Both of these must come before the "Joining…" screen below. That screen
+  // renders whenever a session exists, so putting them after it meant a failed
+  // acceptance sat on "Joining…" forever with the reason never shown -- which
+  // is exactly what happened opening an invite while signed in as someone else.
+  if (wrongAccount) {
+    return (
+      <Centered>
+        <div className="w-full max-w-sm text-center">
+          <p className="mb-3 text-4xl">✋</p>
+          <h1 className="mb-2 text-lg font-semibold text-text-primary">
+            This invite is for a different account
+          </h1>
+          <p className="mb-6 text-sm text-text-secondary">
+            It was sent to <strong>{preview.email}</strong>, but you're signed in as{' '}
+            <strong>{user?.email}</strong>. An invite only works for the address it was sent to.
+          </p>
+          <button
+            onClick={signOut}
+            className="mb-2 w-full rounded-xl bg-primary px-4 py-3 font-medium text-white"
+          >
+            Sign out and join as {preview.email}
+          </button>
+          <button
+            onClick={() => navigate('/', { replace: true })}
+            className="w-full rounded-xl border border-border px-4 py-3 text-text-secondary"
+          >
+            Stay signed in as {user?.email}
+          </button>
+        </div>
+      </Centered>
+    )
+  }
+
+  if (error && session) {
+    return (
+      <Centered>
+        <div className="w-full max-w-sm text-center">
+          <p className="mb-3 text-4xl">⚠️</p>
+          <h1 className="mb-2 text-lg font-semibold text-text-primary">Couldn't join this group</h1>
+          <p className="mb-6 text-sm text-status-critical">{error}</p>
+          <button
+            onClick={() => navigate('/', { replace: true })}
+            className="w-full rounded-xl bg-primary px-4 py-3 font-medium text-white"
+          >
+            Go to your lists
+          </button>
+        </div>
+      </Centered>
+    )
   }
 
   if (session || step === 'joining') {
