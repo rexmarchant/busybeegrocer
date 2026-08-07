@@ -1,3 +1,10 @@
+## [1.6.3](https://github.com/rexmarchant/busybeegrocer/compare/v1.6.2...v1.6.3) (2026-08-07)
+
+
+### Bug Fixes
+
+* show queued changes after an offline reload, and resume the timer at once ([05b0ad8](https://github.com/rexmarchant/busybeegrocer/commit/05b0ad817ca1fe865736aa39decc1402a3523a67))
+
 ## [1.6.2](https://github.com/rexmarchant/busybeegrocer/compare/v1.6.1...v1.6.2) (2026-08-07)
 
 
