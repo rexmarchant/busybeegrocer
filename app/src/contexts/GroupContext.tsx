@@ -37,6 +37,9 @@ interface GroupContextValue {
   /** True when the last attempt to read groups failed. Lets callers tell
    * "you have no groups" apart from "we couldn't find out". */
   loadFailed: boolean
+  /** Exposed so routing can refuse to decide anything until auth has resolved
+   * too -- see groupGate(). */
+  authLoading: boolean
   setCurrentGroupId: (id: string) => void
   createGroup: (name: string) => Promise<Group>
   refreshGroups: () => Promise<void>
@@ -54,15 +57,22 @@ export function GroupProvider({ children }: { children: ReactNode }) {
   const [loadFailed, setLoadFailed] = useState(false)
 
   const refreshGroups = useCallback(async () => {
+    // While auth is restoring, `user` is null but that means nothing yet.
+    // Returning without touching state is essential: the previous version
+    // cleared `groups` and set loading false here, which for one render made
+    // "not looked yet" indistinguishable from "has no groups" -- and sent
+    // people to Create-your-group on an offline reload.
+    if (authLoading) return
+
     if (!user) {
+      // Genuinely signed out now, so the cache should go too -- it would
+      // otherwise leak group names to the next person on a shared device.
       setGroups([])
-      // Only wipe the cache once auth has actually resolved to "signed out" --
-      // `user` is briefly null while the session is being restored, and
-      // clearing here would throw away the cache on every cold start.
-      if (!authLoading) writeCachedGroups([])
+      writeCachedGroups([])
       setLoading(false)
       return
     }
+
     setLoading(true)
     const { data, error } = await supabase
       .from('groups')
@@ -118,7 +128,16 @@ export function GroupProvider({ children }: { children: ReactNode }) {
 
   return (
     <GroupContext.Provider
-      value={{ groups, currentGroup, loading, loadFailed, setCurrentGroupId, createGroup, refreshGroups }}
+      value={{
+        groups,
+        currentGroup,
+        loading,
+        loadFailed,
+        authLoading,
+        setCurrentGroupId,
+        createGroup,
+        refreshGroups,
+      }}
     >
       {children}
     </GroupContext.Provider>

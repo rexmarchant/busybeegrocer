@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import { useGroup } from './contexts/GroupContext'
+import { groupGate } from './lib/groupGate'
 import Login from './pages/Login'
 import Privacy from './pages/Privacy'
 import AcceptInvite from './pages/AcceptInvite'
@@ -23,15 +24,21 @@ function RequireAuth({ children }: { children: ReactNode }) {
 }
 
 function RequireGroup({ children }: { children: ReactNode }) {
-  const { groups, loading, loadFailed, refreshGroups } = useGroup()
-  if (loading) return <FullScreenLoading />
+  const { groups, loading, loadFailed, authLoading, refreshGroups } = useGroup()
 
-  if (groups.length === 0) {
-    // No groups *and* the read failed means "we don't know", not "you have
-    // none". Sending someone to Create-a-group here is wrong and useless --
-    // creating one needs the network too. This is what a reload with no signal
-    // used to do, mid-shop.
-    if (loadFailed) {
+  // The decision itself lives in groupGate() so it can be tested directly --
+  // getting it wrong is invisible until someone reloads with no signal.
+  const gate = groupGate({
+    authLoading,
+    groupsLoading: loading,
+    groupCount: groups.length,
+    loadFailed,
+  })
+
+  if (gate === 'loading') return <FullScreenLoading />
+
+  if (gate !== 'ready') {
+    if (gate === 'offline') {
       return (
         <div className="flex min-h-svh flex-1 flex-col items-center justify-center gap-4 bg-page px-6 text-center">
           <p className="text-4xl">📴</p>
