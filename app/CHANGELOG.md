@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/rexmarchant/busybeegrocer/compare/v1.6.0...v1.6.1) (2026-08-07)
+
+
+### Bug Fixes
+
+* a trip started with no signal could never be finished ([bf670a7](https://github.com/rexmarchant/busybeegrocer/commit/bf670a7485f1ef12b0a4ace707c5be3d899655d6))
+
 # [1.6.0](https://github.com/rexmarchant/busybeegrocer/compare/v1.5.1...v1.6.0) (2026-08-06)
 
 
