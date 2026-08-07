@@ -20,6 +20,7 @@ import {
 } from '../lib/itemGrouping'
 import { usePersistedState } from '../lib/usePersistedState'
 import { isNetworkFailure, useOfflineQueue } from '../lib/useOfflineQueue'
+import { applyQueuedToggles, loadQueue } from '../lib/offlineQueue'
 import { describeCacheAge, listCacheKey, readCache, writeCache, type ListSnapshot } from '../lib/offlineCache'
 import CollapseHeader from '../components/CollapseHeader'
 import Toast, { useToast } from '../components/Toast'
@@ -120,7 +121,11 @@ export default function ShoppingModePage() {
     const cached = readCache<ListSnapshot>(listCacheKey(listId))
     if (cached) {
       setList(cached.data.list)
-      setItems(cached.data.items)
+      // Overlay anything still queued. The cache is the last state the server
+      // confirmed; the queue is what has happened since. Showing the cache
+      // alone is what put two unchecked items under a banner announcing that
+      // two changes had been saved.
+      setItems(applyQueuedToggles(cached.data.items, loadQueue()))
       const cMap: Record<string, CatalogItem> = {}
       for (const c of cached.data.catalog) cMap[c.id] = c
       setCatalog(cMap)
@@ -129,14 +134,26 @@ export default function ShoppingModePage() {
       setStaleSince(cached.at)
     }
 
-    const { data: listData } = await supabase.from('lists').select('*').eq('id', listId).single()
-    if (listData) setList(listData as ShoppingList)
-
     const resuming = activeSession?.listId === listId
     let activeSessionId: string | null = resuming ? activeSession.sessionId : null
     // Keep the original start time when resuming, so pausing doesn't reset the
     // timer -- including when we're only resuming to repair a broken session.
     const activeStartedAt = resuming ? activeSession.startedAt : Date.now()
+
+    // Get the clock running from stored state before any network call. These
+    // requests can hang for a long time with no signal, and the timer used to
+    // sit at 0:00 until they failed -- or forever, if they never did.
+    startedAtRef.current = activeStartedAt
+    const tick = () => setElapsed(Math.floor((Date.now() - activeStartedAt) / 1000))
+    tick()
+    intervalRef.current = window.setInterval(tick, 1000)
+
+    if (resuming) sessionIdRef.current = activeSessionId
+    const storedItemIds = localStorage.getItem(sessionItemsKey(activeSessionId))
+    sessionItemIdsRef.current = new Set(storedItemIds ? (JSON.parse(storedItemIds) as string[]) : [])
+
+    const { data: listData } = await supabase.from('lists').select('*').eq('id', listId).single()
+    if (listData) setList(listData as ShoppingList)
 
     // Start a server session when we don't have one. That covers a fresh trip,
     // and also repairs a trip that began with no signal and was stored with a
@@ -151,16 +168,8 @@ export default function ShoppingModePage() {
       // row yet. What must never happen again is pretending the trip cannot be
       // ended just because the server never heard about it.
       startSession(listId, activeSessionId, activeStartedAt)
+      sessionIdRef.current = activeSessionId
     }
-
-    sessionIdRef.current = activeSessionId
-    startedAtRef.current = activeStartedAt
-    const storedItemIds = localStorage.getItem(sessionItemsKey(activeSessionId))
-    sessionItemIdsRef.current = new Set(storedItemIds ? (JSON.parse(storedItemIds) as string[]) : [])
-    intervalRef.current = window.setInterval(() => {
-      setElapsed(Math.floor((Date.now() - activeStartedAt) / 1000))
-    }, 1000)
-    setElapsed(Math.floor((Date.now() - activeStartedAt) / 1000))
 
     await loadItems()
   }
@@ -199,18 +208,25 @@ export default function ShoppingModePage() {
     setDepartments((deptData as Department[]) ?? [])
     setStores((storeData as Store[]) ?? [])
 
-    const loadedItems = (itemData as ListItem[]) ?? []
-    setItems(loadedItems)
+    const serverItems = (itemData as ListItem[]) ?? []
 
+    // Cache what the server actually said, never the optimistic view -- a
+    // dropped queue must not leave unsent changes baked in as though confirmed.
     // Same cache the list page reads, so whichever screen you open first keeps
     // the other one usable offline.
     writeCache<ListSnapshot>(listCacheKey(listId), {
       list: listRef.current,
-      items: loadedItems,
+      items: serverItems,
       catalog: (catalogData as CatalogItem[]) ?? [],
       departments: (deptData as Department[]) ?? [],
       stores: (storeData as Store[]) ?? [],
     })
+
+    // Display with anything still unsent on top. Normally the queue has just
+    // been flushed and this is a no-op; it matters when a read succeeds while
+    // writes are still failing.
+    const loadedItems = applyQueuedToggles(serverItems, loadQueue())
+    setItems(loadedItems)
 
     // Only items the current store filter lets through count towards this trip —
     // anything filtered out isn't what we're shopping for right now.

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { enqueue, flush, type QueuedMutation } from './offlineQueue.ts'
+import { applyQueuedToggles, enqueue, flush, type QueuedMutation } from './offlineQueue.ts'
 
 function toggle(itemId: string, checked: boolean, queuedAt = 0): QueuedMutation {
   return { kind: 'toggleChecked', itemId, checked, queuedAt }
@@ -90,6 +90,43 @@ test('flush stops at the first failure and keeps the rest, in order', async () =
   assert.deepEqual(seen, ['a', 'b'], 'must not keep trying after the network drops')
   assert.equal(res.sent, 1)
   assert.deepEqual(res.remaining.map(targetOf), ['b', 'c'], 'failed operation is retained')
+})
+
+test('pending toggles are overlaid onto cached items', () => {
+  // The reported bug: reloading offline showed the cache (11:47, unchecked)
+  // directly under a banner saying two changes were saved on the phone.
+  const cached = [
+    { id: 'brauts', is_checked: false },
+    { id: 'bacon', is_checked: false },
+    { id: 'milk', is_checked: true },
+  ]
+  const queue = [toggle('brauts', true), toggle('bacon', true)]
+
+  assert.deepEqual(applyQueuedToggles(cached, queue), [
+    { id: 'brauts', is_checked: true },
+    { id: 'bacon', is_checked: true },
+    { id: 'milk', is_checked: true },
+  ])
+})
+
+test('an overlay can uncheck as well as check', () => {
+  const items = [{ id: 'a', is_checked: true }]
+  assert.deepEqual(applyQueuedToggles(items, [toggle('a', false)]), [{ id: 'a', is_checked: false }])
+})
+
+test('session ends in the queue never affect items', () => {
+  const items = [{ id: 'a', is_checked: false }]
+  assert.deepEqual(applyQueuedToggles(items, [endSession('a')]), items)
+})
+
+test('an empty queue returns the very same array', () => {
+  const items = [{ id: 'a', is_checked: false }]
+  assert.equal(applyQueuedToggles(items, []), items, 'should not churn identity for no reason')
+})
+
+test('overlay ignores queued items no longer on the list', () => {
+  const items = [{ id: 'a', is_checked: false }]
+  assert.deepEqual(applyQueuedToggles(items, [toggle('deleted-item', true)]), items)
 })
 
 test('flush on an empty queue is a no-op', async () => {

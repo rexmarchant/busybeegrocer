@@ -58,6 +58,32 @@ export function enqueue(queue: QueuedMutation[], mutation: QueuedMutation): Queu
   return next.length > MAX_QUEUED ? next.slice(next.length - MAX_QUEUED) : next
 }
 
+/** Overlays not-yet-sent changes onto items read from the server or the cache.
+ *
+ * The cache holds the last state the server confirmed; the queue holds what has
+ * happened since. Displaying one without the other is how a reload with no
+ * signal could show "2 changes saved on this phone" directly above the two
+ * items sitting there unchecked -- the app contradicting itself about work the
+ * person had definitely done.
+ *
+ * Only ever applied for display. The cache keeps raw server state, so a dropped
+ * queue can never leave optimistic values baked in as though confirmed. */
+export function applyQueuedToggles<T extends { id: string; is_checked: boolean }>(
+  items: T[],
+  queue: QueuedMutation[],
+): T[] {
+  const pending = new Map<string, boolean>()
+  for (const mutation of queue) {
+    if (mutation.kind === 'toggleChecked') pending.set(mutation.itemId, mutation.checked)
+  }
+  if (pending.size === 0) return items
+
+  return items.map((item) => {
+    const checked = pending.get(item.id)
+    return checked === undefined || checked === item.is_checked ? item : { ...item, is_checked: checked }
+  })
+}
+
 /** Sends queued operations in order, stopping at the first failure.
  *
  * Stopping rather than skipping matters: a failure almost always means the

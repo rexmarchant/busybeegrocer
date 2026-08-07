@@ -22,6 +22,7 @@ import {
 } from '../lib/itemGrouping'
 import { usePersistedState } from '../lib/usePersistedState'
 import { isNetworkFailure, useOfflineQueue } from '../lib/useOfflineQueue'
+import { applyQueuedToggles, loadQueue } from '../lib/offlineQueue'
 import { describeCacheAge, listCacheKey, readCache, writeCache, type ListSnapshot } from '../lib/offlineCache'
 import CollapseHeader from '../components/CollapseHeader'
 import ConfirmModal from '../components/ConfirmModal'
@@ -103,7 +104,10 @@ export default function ListDetail() {
       setList(data.list)
       setNameDraft(data.list.name)
     }
-    setItems(data.items)
+    // Overlay anything still queued: the snapshot is the last server-confirmed
+    // state, the queue is what has happened since. Without this a reload with
+    // no signal shows items unchecked under a banner saying they were saved.
+    setItems(applyQueuedToggles(data.items, loadQueue()))
     const catalogMap: Record<string, CatalogItem> = {}
     for (const c of data.catalog) catalogMap[c.id] = c
     setCatalog(catalogMap)
