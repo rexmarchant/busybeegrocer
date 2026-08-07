@@ -23,7 +23,29 @@ export default function GroupSettings() {
     [inviteEmail, inviteTouched],
   )
   const [pendingInvites, setPendingInvites] = useState<Invite[]>([])
-  const [lastInviteLink, setLastInviteLink] = useState<string | null>(null)
+  const [lastInvite, setLastInvite] = useState<{ email: string; link: string } | null>(null)
+  /** Which link was just copied, so the button can confirm it worked. */
+  const [copiedLink, setCopiedLink] = useState<string | null>(null)
+  const [copyFailed, setCopyFailed] = useState(false)
+
+  function inviteLink(inviteId: string) {
+    return `${window.location.origin}${import.meta.env.BASE_URL}join/${inviteId}`
+  }
+
+  async function copyLink(link: string) {
+    try {
+      await navigator.clipboard.writeText(link)
+      setCopyFailed(false)
+      setCopiedLink(link)
+      window.setTimeout(() => setCopiedLink((c) => (c === link ? null : c)), 2500)
+    } catch {
+      // Browsers refuse clipboard access in plenty of ordinary situations --
+      // an unfocused window, an insecure context, older WebViews. Swallowing
+      // that leaves someone tapping a button that does nothing, so point them
+      // at the link instead; it is on screen and selectable.
+      setCopyFailed(true)
+    }
+  }
   const [removeTarget, setRemoveTarget] = useState<Profile | null>(null)
 
   const isGroupOwner = currentGroup?.created_by === user?.id
@@ -62,8 +84,9 @@ export default function GroupSettings() {
       .single()
     if (error || !invite) return
 
-    const link = `${window.location.origin}${import.meta.env.BASE_URL}join/${invite.id}`
-    setLastInviteLink(link)
+    const link = inviteLink(invite.id)
+    const invitedEmail = inviteEmail.trim()
+    setLastInvite({ email: invitedEmail, link })
     const subject = encodeURIComponent(`Join ${currentGroup.name} on BusyBeeGrocer`)
     const body = encodeURIComponent(
       `You've been invited to join ${currentGroup.name} on BusyBeeGrocer.\n\nTap this link to join: ${link}`,
@@ -206,22 +229,62 @@ export default function GroupSettings() {
               Did you mean <span className="font-medium text-primary underline">{inviteSuggestion}</span>?
             </button>
           )}
-          {lastInviteLink && (
-            <p className="mb-4 text-xs text-text-muted">
-              Invite link: <span className="break-all">{lastInviteLink}</span>
-            </p>
+          {/* Nothing has been emailed by the app. The row exists and the link
+              works, but whether a message actually goes out is entirely down to
+              the person hitting send in their own mail app -- so say that,
+              rather than implying an invite is on its way. The link is the
+              reliable path and is presented as the primary action, because
+              mailto: does nothing at all on a device with no mail app set up. */}
+          {lastInvite && (
+            <div className="mb-4 rounded-2xl border border-border bg-surface p-4">
+              <p className="mb-1 text-sm font-medium text-text-primary">
+                Invite created for {lastInvite.email}
+              </p>
+              <p className="mb-3 text-xs text-text-secondary">
+                Your email app should have opened with a message ready to go —{' '}
+                <strong className="font-medium">you still need to send it.</strong> Or copy the link
+                and share it any way you like.
+              </p>
+              <button
+                onClick={() => copyLink(lastInvite.link)}
+                className="mb-2 w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white"
+              >
+                {copiedLink === lastInvite.link ? '✓ Link copied' : 'Copy invite link'}
+              </button>
+              {copyFailed && (
+                <p className="mb-1 text-xs text-status-critical">
+                  Couldn't copy automatically — select the link below and copy it by hand.
+                </p>
+              )}
+              <p className="cursor-text break-all select-all text-xs text-text-muted">
+                {lastInvite.link}
+              </p>
+            </div>
           )}
 
           {pendingInvites.length > 0 && (
             <>
-              <h2 className="mb-2 text-sm font-medium text-text-secondary">Pending invites</h2>
+              {/* "Pending" means the invite has not been accepted -- not that
+                  anyone has been contacted. The app never sends these, so a row
+                  here is no evidence an email left anyone's outbox. */}
+              <h2 className="mb-1 text-sm font-medium text-text-secondary">Waiting to be accepted</h2>
+              <p className="mb-2 text-xs text-text-muted">
+                Created but not yet accepted. If someone says they never got it, copy the link and
+                send it again — no need to invite them twice.
+              </p>
               <ul className="mb-6 flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
                 {pendingInvites.map((inv) => (
-                  <li key={inv.id} className="flex items-center justify-between px-4 py-3">
-                    <span className="text-text-primary">{inv.email}</span>
+                  <li key={inv.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                    <span className="min-w-0 flex-1 truncate text-text-primary">{inv.email}</span>
+                    <button
+                      onClick={() => copyLink(inviteLink(inv.id))}
+                      className="shrink-0 text-sm text-primary underline"
+                    >
+                      {copiedLink === inviteLink(inv.id) ? '✓ Copied' : 'Copy link'}
+                    </button>
                     <button
                       onClick={() => handleRevokeInvite(inv.id)}
-                      className="text-sm text-status-critical underline"
+                      className="shrink-0 text-sm text-status-critical underline"
                     >
                       Revoke
                     </button>
