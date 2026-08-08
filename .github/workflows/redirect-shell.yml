@@ -1,0 +1,47 @@
+# Replaces the old GitHub Pages site with a "we've moved" page.
+#
+# Run this ONCE, by hand, after busybeegrocer.com is confirmed working -- never
+# before, or anyone still on the old URL is sent to a domain that isn't serving
+# the app yet.
+#
+# Deliberately manual and separate from the main deploy: it publishes to a host
+# the app no longer uses, and should not fire on every push.
+#
+# Keep the resulting page up indefinitely. It costs nothing and it is the only
+# thing standing between an old home-screen icon and a dead end.
+name: Publish the old-URL redirect shell
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble the shell
+        run: |
+          mkdir -p out/icons
+          cp redirect-shell/index.html out/
+          # Serve the same file as 404.html so deep links into the old app --
+          # /busybeegrocer/lists/<id> from an old bookmark or invite -- land here
+          # rather than on GitHub's own 404.
+          cp redirect-shell/index.html out/404.html
+          cp app/public/icons/icon-192.png out/icons/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,26 +1,19 @@
-name: Deploy to GitHub Pages
+name: Deploy to Cloudflare Pages
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 concurrency:
-  group: pages
+  group: deploy
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pages: write
-      id-token: write
     defaults:
       run:
         working-directory: app
@@ -34,12 +27,17 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
       - run: npm ci
+      - run: npm test
+
       # Bumps app/package.json's version based on Conventional Commits since the
       # last release (fix: -> patch, feat: -> minor, "BREAKING CHANGE:" -> major)
-      # and pushes that bump back to main — [skip ci] in its commit message
+      # and pushes that bump back to main -- [skip ci] in its commit message
       # stops that push from re-triggering this workflow. Commits that don't
       # follow the convention just don't trigger a bump; the step still
       # succeeds either way, and the rest of the build proceeds unaffected.
+      #
+      # This runs *before* the build on purpose: the build reads the version it
+      # writes, so the deployed app reports the release it actually is.
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -48,6 +46,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - id: build_number
         run: echo "count=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
+
+      # Vite writes to ../dist/app, matching the path it is served from.
       - run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
@@ -56,22 +56,35 @@ jobs:
           # Publishable by design -- it only permits sending events, not reading
           # them. Kept as a secret purely so local builds stay console-only.
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
-      # GitHub Pages has no server-side router — direct hits on nested routes
-      # (refresh, typed URL, invite/magic-link emails) 404 because only
-      # index.html exists as a real file. Serving the same file as 404.html
-      # makes Pages fall back to it, and react-router picks up the path from
-      # there client-side.
-      - run: cp dist/index.html dist/404.html
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: app/dist
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      # The landing page, plus _redirects and _headers, which are only read from
+      # the root of the published directory. Copied after the build because Vite
+      # clears dist/app.
+      - name: Assemble the deploy directory
+        run: cp -r ../site/. ../dist/
+
+      - name: Verify the deploy directory looks right
+        run: |
+          test -f ../dist/index.html || { echo "landing page missing"; exit 1; }
+          test -f ../dist/_redirects || { echo "_redirects missing"; exit 1; }
+          test -f ../dist/_headers   || { echo "_headers missing"; exit 1; }
+          test -f ../dist/app/index.html || { echo "app missing"; exit 1; }
+          test -f ../dist/app/manifest.webmanifest || { echo "manifest missing"; exit 1; }
+
+      # A direct upload rather than letting the host build from Git.
+      # semantic-release has to bump the version before the build runs, and a
+      # Git-connected host would build the pre-bump commit and then skip the
+      # release commit entirely because of its [skip ci] marker -- deploying an
+      # app that misreports its own version.
+      #
+      # --branch main marks this as the production deployment; anything else
+      # would land on a preview URL instead.
+      - name: Deploy to Cloudflare Pages
+        run: >
+          npx wrangler@4 pages deploy ../dist
+          --project-name busybeegrocer
+          --branch main
+          --commit-dirty=true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
