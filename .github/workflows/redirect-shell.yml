@@ -40,6 +40,10 @@ jobs:
           # rather than on GitHub's own 404.
           cp redirect-shell/index.html out/404.html
           cp app/public/icons/icon-192.png out/icons/
+          # Must keep the exact filename the retired app registered, or the
+          # browsers still running it never fetch this and the old worker goes
+          # on serving the old app from cache forever.
+          cp redirect-shell/sw.js out/sw.js
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out
