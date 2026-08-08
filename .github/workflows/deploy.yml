@@ -61,7 +61,15 @@ jobs:
       # the root of the published directory. Copied after the build because Vite
       # clears dist/app.
       - name: Assemble the deploy directory
-        run: cp -r ../site/. ../dist/
+        run: |
+          cp -r ../site/. ../dist/
+          # The SPA fallback for client-side routes under /app/. Cloudflare
+          # Pages serves the nearest 404.html walking up the tree, so this
+          # catches /app/lists/<id> and friends without intercepting any real
+          # asset -- see site/_redirects for why a _redirects rule cannot be
+          # used here, in either of the two shapes that look like they should
+          # work.
+          cp ../dist/app/index.html ../dist/app/404.html
 
       - name: Verify the deploy directory looks right
         run: |
@@ -70,6 +78,15 @@ jobs:
           test -f ../dist/_headers   || { echo "_headers missing"; exit 1; }
           test -f ../dist/app/index.html || { echo "app missing"; exit 1; }
           test -f ../dist/app/manifest.webmanifest || { echo "manifest missing"; exit 1; }
+          test -f ../dist/app/404.html || { echo "SPA fallback missing"; exit 1; }
+          test -f ../dist/404.html || { echo "site 404 page missing"; exit 1; }
+          # A fallback that lost its script tag would serve a blank page on
+          # every deep link, and nothing else here would notice.
+          grep -q 'src="/app/assets/' ../dist/app/404.html || { echo "SPA fallback has no app bundle"; exit 1; }
+          # The rewrite that shadowed every script and the service worker parsed
+          # perfectly well, so assert the shape rather than trusting the file.
+          grep -qE '^[^#[:space:]]' ../dist/_redirects && { echo "_redirects must contain no rules -- see the file"; exit 1; }
+          true
 
       # A direct upload rather than letting the host build from Git.
       # semantic-release has to bump the version before the build runs, and a

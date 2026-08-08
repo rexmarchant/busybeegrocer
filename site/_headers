@@ -23,3 +23,9 @@
 
 /index.html
   Cache-Control: public, max-age=0, must-revalidate
+
+# The SPA fallback is a copy of the app's index.html, served for every
+# client-side route under /app/. It has to go stale just as readily, or deep
+# links would keep booting an old bundle after a deploy.
+/app/404.html
+  Cache-Control: public, max-age=0, must-revalidate

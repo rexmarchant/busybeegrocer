@@ -1,10 +1,22 @@
-# SPA fallback, scoped to the app only.
+# Deliberately empty of rules. Two Cloudflare Pages behaviours make the obvious
+# SPA rule unusable here, and both were found the hard way -- record them so
+# nobody re-adds it.
 #
-# Every route inside the app is client-side, so a direct hit or a refresh on
-# /app/lists/<id> must serve the app's index.html. This returns a real 200,
-# unlike the GitHub Pages 404.html trick it replaces. Cloudflare Pages and
-# Netlify both read this file, in the same format.
+#   /app/*  /app/index.html  200
+#     Silently DISCARDED. Pages canonicalises /app/index.html back to /app/,
+#     which re-matches /app/*, so it detects an infinite loop and drops the rule.
+#     wrangler warns; the deployed site just serves the landing page for every
+#     route inside the app. The same rule works on Netlify, which is where it
+#     came from.
 #
-# Deliberately not a catch-all: a typo at the site root should get a genuine
-# 404, not silently boot the app.
-/app/*    /app/index.html   200
+#   /app/*  /app-shell  200        (shell moved outside the pattern)
+#     Parses fine and is far worse. Cloudflare evaluates _redirects BEFORE
+#     static assets -- the reverse of Netlify -- so this rewrites *everything*
+#     under /app/ to the shell: every script, the stylesheet, the manifest and
+#     the service worker all get served as text/html and the app never boots.
+#
+# The SPA fallback is dist/app/404.html instead, a copy of the app's index.html
+# made in CI. Pages serves the nearest 404.html walking up the tree, so it
+# catches client-side routes without touching real assets. The cost is that a
+# deep link returns a 404 status while serving a working app; a Pages Function
+# would be needed for a true 200.
