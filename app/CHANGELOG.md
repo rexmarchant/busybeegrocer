@@ -1,3 +1,10 @@
+# [2.1.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.0.3...v2.1.0) (2026-08-08)
+
+
+### Features
+
+* generate the SPA routing rules from the app's route table ([5ab6afa](https://github.com/rexmarchant/busybeegrocer/commit/5ab6afa88cf01b7ffd6653253c208b9edce541c0))
+
 ## [2.0.3](https://github.com/rexmarchant/busybeegrocer/compare/v2.0.2...v2.0.3) (2026-08-08)
 
 
