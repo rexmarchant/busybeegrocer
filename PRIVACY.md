@@ -3,7 +3,7 @@
 BusyBeeGrocer is a personal project, not a company. This page describes exactly what it stores,
 who else can see it, and how to get rid of it.
 
-Last updated: 6 August 2026
+Last updated: 8 August 2026
 
 ## What is stored
 
