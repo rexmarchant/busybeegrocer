@@ -1,8 +1,9 @@
 # SPA fallback, scoped to the app only.
 #
 # Every route inside the app is client-side, so a direct hit or a refresh on
-# /app/lists/<id> must serve the app's index.html. Netlify returns a real 200
-# for this, unlike the GitHub Pages 404.html trick it replaces.
+# /app/lists/<id> must serve the app's index.html. This returns a real 200,
+# unlike the GitHub Pages 404.html trick it replaces. Cloudflare Pages and
+# Netlify both read this file, in the same format.
 #
 # Deliberately not a catch-all: a typo at the site root should get a genuine
 # 404, not silently boot the app.

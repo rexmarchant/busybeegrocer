@@ -1,4 +1,4 @@
-name: Deploy to Netlify
+name: Deploy to Cloudflare Pages
 
 on:
   push:
@@ -57,9 +57,9 @@ jobs:
           # them. Kept as a secret purely so local builds stay console-only.
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
 
-      # The landing page, plus _redirects and _headers, which Netlify only reads
-      # from the root of the published directory. Copied after the build because
-      # Vite clears dist/app.
+      # The landing page, plus _redirects and _headers, which are only read from
+      # the root of the published directory. Copied after the build because Vite
+      # clears dist/app.
       - name: Assemble the deploy directory
         run: cp -r ../site/. ../dist/
 
@@ -71,15 +71,20 @@ jobs:
           test -f ../dist/app/index.html || { echo "app missing"; exit 1; }
           test -f ../dist/app/manifest.webmanifest || { echo "manifest missing"; exit 1; }
 
-      # Deploying a pre-built directory rather than letting Netlify build:
-      # semantic-release has to bump the version before the build, and Netlify's
-      # own Git integration would build the pre-bump commit and then skip the
-      # release commit entirely because of its [skip ci] marker. It also means
-      # no Netlify build minutes are consumed.
-      - name: Deploy to Netlify
+      # A direct upload rather than letting the host build from Git.
+      # semantic-release has to bump the version before the build runs, and a
+      # Git-connected host would build the pre-bump commit and then skip the
+      # release commit entirely because of its [skip ci] marker -- deploying an
+      # app that misreports its own version.
+      #
+      # --branch main marks this as the production deployment; anything else
+      # would land on a preview URL instead.
+      - name: Deploy to Cloudflare Pages
         run: >
-          npx netlify-cli@latest deploy --prod --dir ../dist
-          --message "${{ github.sha }}"
+          npx wrangler@4 pages deploy ../dist
+          --project-name busybeegrocer
+          --branch main
+          --commit-dirty=true
         env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
