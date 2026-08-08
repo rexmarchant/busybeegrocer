@@ -1,3 +1,10 @@
+## [2.0.3](https://github.com/rexmarchant/busybeegrocer/compare/v2.0.2...v2.0.3) (2026-08-08)
+
+
+### Bug Fixes
+
+* retire the old service worker instead of stranding it ([74e3071](https://github.com/rexmarchant/busybeegrocer/commit/74e30712814c444fd18218fb9e02001daaa3b928))
+
 ## [2.0.2](https://github.com/rexmarchant/busybeegrocer/compare/v2.0.1...v2.0.2) (2026-08-08)
 
 
