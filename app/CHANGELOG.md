@@ -1,3 +1,10 @@
+## [2.0.1](https://github.com/rexmarchant/busybeegrocer/compare/v2.0.0...v2.0.1) (2026-08-08)
+
+
+### Bug Fixes
+
+* serve the app on client-side routes, not the landing page ([036d56c](https://github.com/rexmarchant/busybeegrocer/commit/036d56c6a0c867584c7a256e0b6fddc5c9deb6d7))
+
 # [2.0.0](https://github.com/rexmarchant/busybeegrocer/compare/v1.8.1...v2.0.0) (2026-08-08)
 
 
