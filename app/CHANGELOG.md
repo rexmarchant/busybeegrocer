@@ -1,3 +1,10 @@
+## [2.0.2](https://github.com/rexmarchant/busybeegrocer/compare/v2.0.1...v2.0.2) (2026-08-08)
+
+
+### Bug Fixes
+
+* enumerate the app's routes so deep links serve the app with a 200 ([e5a9a3d](https://github.com/rexmarchant/busybeegrocer/commit/e5a9a3d29b6a9f111c60d2baa605abb8182a5087))
+
 ## [2.0.1](https://github.com/rexmarchant/busybeegrocer/compare/v2.0.0...v2.0.1) (2026-08-08)
 
 
