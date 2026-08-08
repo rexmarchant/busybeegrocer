@@ -39,6 +39,21 @@ test('joins hard-wrapped lines into flowing paragraphs', () => {
   assert.equal(blocks[0].type === 'paragraph' && plain(blocks[0].segments), 'one line wrapped onto another')
 })
 
+test('parses the same whatever the line endings are', () => {
+  // Git checks out CRLF on Windows. Without normalising, "\r\n\r\n" is not a
+  // blank line to /\n{2,}/ and the entire document becomes one paragraph.
+  const lf = '# Title\n\nFirst para\n\n## Section\n\nSecond para'
+  const crlf = lf.replace(/\n/g, '\r\n')
+  const cr = lf.replace(/\n/g, '\r')
+
+  assert.equal(parseMarkdown(crlf).length, parseMarkdown(lf).length)
+  assert.equal(parseMarkdown(cr).length, parseMarkdown(lf).length)
+  assert.deepEqual(
+    parseMarkdown(crlf).map((b) => b.type),
+    ['heading', 'paragraph', 'heading', 'paragraph'],
+  )
+})
+
 test('recognises a horizontal rule', () => {
   const blocks = parseMarkdown('before\n\n---\n\nafter')
   assert.deepEqual(blocks.map((b) => b.type), ['paragraph', 'rule', 'paragraph'])

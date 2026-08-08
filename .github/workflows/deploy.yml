@@ -60,18 +60,12 @@ jobs:
       # The landing page, plus _redirects and _headers, which are only read from
       # the root of the published directory. Copied after the build because Vite
       # clears dist/app.
+      # Copies the landing page over the built app, writes the SPA shell, and
+      # generates the routing rules from App.tsx. Running the same script
+      # locally produces a byte-identical directory, so `wrangler pages dev
+      # ../dist` tests exactly what gets published.
       - name: Assemble the deploy directory
-        run: |
-          cp -r ../site/. ../dist/
-          # Target of the SPA rewrites in _redirects. Must sit outside /app/ and
-          # be referenced without .html, or Pages canonicalisation recreates the
-          # redirect loop described in that file.
-          cp ../dist/app/index.html ../dist/app-shell.html
-          # Safety net for any app route not listed in _redirects. Pages checks
-          # the requested directory's own 404.html, so this catches one level
-          # (/app/whatever) but not deeper -- which is exactly why the routes are
-          # enumerated rather than relying on it.
-          cp ../dist/app/index.html ../dist/app/404.html
+        run: npm run assemble
 
       - name: Verify the deploy directory looks right
         run: |
@@ -88,7 +82,11 @@ jobs:
           grep -q 'src="/app/assets/' ../dist/app-shell.html || { echo "SPA shell has no app bundle"; exit 1; }
           # A catch-all rewrite parses perfectly well and silently serves HTML
           # for every script and the service worker, so reject one outright.
-          grep -qE '^/app/\*' ../dist/_redirects && { echo "catch-all /app/* rewrite would shadow assets"; exit 1; }
+          # The generator refuses to emit one; this catches a hand edit.
+          grep -qE '^/app/\*[[:space:]]' ../dist/_redirects && { echo "catch-all /app/* rewrite would shadow assets"; exit 1; }
+          # An empty rules block would mean every deep link falls back to a 404
+          # status, which is easy to miss because the app still loads.
+          grep -qE '^/app/' ../dist/_redirects || { echo "no SPA rules were generated"; exit 1; }
           true
 
       # A direct upload rather than letting the host build from Git.

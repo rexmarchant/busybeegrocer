@@ -77,6 +77,16 @@ npm test             # unit tests
 npm run lint
 ```
 
+To check the deployed site rather than the dev server — routing, the landing page, cache headers — build the real thing and serve it the way Cloudflare will:
+
+```bash
+npm run build
+npm run assemble                     # same script CI runs
+npx wrangler@4 pages dev ../dist     # http://127.0.0.1:8788
+```
+
+This is the only way to test routing. `npm run dev` serves the app at `/`, not `/app/`, and knows nothing about `_redirects`.
+
 Then:
 
 ```bash
@@ -153,11 +163,11 @@ Held elsewhere, never in the repo: the **Resend API key** and the **Turnstile se
 
 These are the things that have already gone wrong, or would.
 
-**1. `site/_redirects` lists the app's routes by hand.**
-Add a route to `App.tsx` and you must add a line there. A missed route still works but returns a 404 status instead of 200.
+**1. The routing rules are generated — don't hand-edit them.**
+`app/scripts/assemble.ts` reads the routes out of `App.tsx` and writes the rules into `dist/_redirects`. Add a `<Route>` and its rule appears on the next build. `site/_redirects` holds only the explanatory header. This used to be a hand-maintained list, and a forgotten line meant a route that worked but returned the wrong status.
 
 **2. Never write `/app/*` as a catch-all in `_redirects`.**
-Cloudflare evaluates redirects *before* static files, so a catch-all serves the HTML shell for every script, the stylesheet, the manifest and the service worker, and the app never boots. Rewriting to `/app/index.html` instead is silently discarded as an infinite loop. CI rejects the catch-all; the reasoning is written in the file.
+Cloudflare evaluates redirects *before* static files, so a catch-all serves the HTML shell for every script, the stylesheet, the manifest and the service worker, and the app never boots. Rewriting to `/app/index.html` instead is silently discarded as an infinite loop. The generator refuses to emit either, and CI rejects a hand-added one.
 
 **3. Always `git pull --rebase` before pushing.**
 CI pushes its own release commit, so `main` has usually moved since your last push.
@@ -180,13 +190,14 @@ It no-ops when an item already holds the requested value (migration `20260806173
 
 ## 7. Tests
 
-`npm test` — Node's built-in runner, no extra dependencies. 37 tests over the pure logic:
+`npm test` — Node's built-in runner, no extra dependencies. 48 tests over the pure logic:
 
 - `emailTypos` — sign-in address suggestions
 - `offlineQueue` — queueing, superseding, replay, partial failure
 - `offlineCache` — cache envelopes and hostile input
 - `groupGate` — the routing decision that once sent people to "Create your group" while offline
 - `markdown` — the parser that renders `PRIVACY.md`
+- `routeRedirects` — the rule generator, including that it refuses to emit `/app/*`
 
 **Not covered:** anything behind the login wall. The UI has been checked by hand in a browser instead. When Claude changes something it cannot reach, it should say so rather than imply it verified it.
 

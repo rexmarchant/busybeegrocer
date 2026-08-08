@@ -46,7 +46,12 @@ export function parseInline(text: string): MdSegment[] {
 export function parseMarkdown(source: string): MdBlock[] {
   const blocks: MdBlock[] = []
 
-  for (const raw of source.split(/\n{2,}/)) {
+  // Normalise line endings first. Git checks this file out as CRLF on Windows,
+  // and a blank line is then "\r\n\r\n", which /\n{2,}/ does not match -- the
+  // whole policy collapses into a single paragraph. Production escaped it only
+  // because CI builds on Linux, so it would have appeared the moment anyone
+  // built on Windows.
+  for (const raw of source.replace(/\r\n?/g, '\n').split(/\n{2,}/)) {
     const chunk = raw.trim()
     if (chunk.length === 0) continue
 

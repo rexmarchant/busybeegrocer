@@ -1,34 +1,23 @@
-# SPA fallback for the app's client-side routes.
+# SPA routing for the app.
 #
-# Listed explicitly rather than with /app/*, which cannot work here. Two traps,
-# both found with wrangler's local Pages emulator:
+# THE RULES BELOW THIS HEADER ARE GENERATED. Do not add them by hand -- they are
+# derived from App.tsx by app/scripts/assemble.ts, so a route and its rule can
+# never disagree. Add a <Route> and the rule appears on the next build.
+#
+# Why not a single catch-all, which is what every SPA guide suggests:
 #
 #   /app/*  /app/index.html  200
 #     Silently discarded. Pages canonicalises /app/index.html back to /app/,
-#     re-matching the pattern, so it detects an infinite loop and drops the
-#     rule. wrangler warns; the deployed site says nothing and serves the
-#     landing page for every route in the app.
+#     re-matching the pattern, so it detects an infinite loop and drops the rule.
+#     wrangler warns about it; the deployed site says nothing and serves the
+#     landing page for every route inside the app.
 #
 #   /app/*  /app-shell  200
 #     Parses cleanly and is far worse. Cloudflare evaluates _redirects BEFORE
-#     static assets -- the reverse of Netlify -- so a catch-all rewrites every
+#     static files -- the reverse of Netlify -- so a catch-all rewrites every
 #     script, the stylesheet, the manifest and the service worker to HTML, and
 #     the app never boots.
 #
-# These prefixes are safe because no built asset lives under them: the app's
-# files are in /app/assets, /app/icons, /app/screenshots and /app/video.
-#
-# ADD A LINE HERE WHEN YOU ADD A ROUTE to App.tsx. Anything missed still loads
-# via dist/app/404.html, but with a 404 status instead of 200.
-#
-# The target is /app-shell -- no extension, outside /app/ -- because Pages
-# strips .html and canonicalises /x/index.html to /x/, either of which puts the
-# destination back inside the pattern and recreates the loop above.
-/app/login           /app-shell   200
-/app/privacy         /app-shell   200
-/app/about           /app-shell   200
-/app/group-setup     /app-shell   200
-/app/settings        /app-shell   200
-/app/settings/*      /app-shell   200
-/app/join/*          /app-shell   200
-/app/lists/*         /app-shell   200
+# The generator refuses to emit /app/*, and refuses any prefix that would shadow
+# /app/assets, /app/icons, /app/screenshots or /app/video. CI rejects a
+# catch-all too, in case anyone edits this file directly.

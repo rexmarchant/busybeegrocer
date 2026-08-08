@@ -9,7 +9,8 @@
     "test": "node --test \"src/**/*.test.ts\"",
     "lint": "oxlint",
     "preview": "vite preview",
-    "release": "semantic-release"
+    "release": "semantic-release",
+    "assemble": "node scripts/assemble.ts"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.5.5",
