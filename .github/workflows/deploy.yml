@@ -63,12 +63,14 @@ jobs:
       - name: Assemble the deploy directory
         run: |
           cp -r ../site/. ../dist/
-          # The SPA fallback for client-side routes under /app/. Cloudflare
-          # Pages serves the nearest 404.html walking up the tree, so this
-          # catches /app/lists/<id> and friends without intercepting any real
-          # asset -- see site/_redirects for why a _redirects rule cannot be
-          # used here, in either of the two shapes that look like they should
-          # work.
+          # Target of the SPA rewrites in _redirects. Must sit outside /app/ and
+          # be referenced without .html, or Pages canonicalisation recreates the
+          # redirect loop described in that file.
+          cp ../dist/app/index.html ../dist/app-shell.html
+          # Safety net for any app route not listed in _redirects. Pages checks
+          # the requested directory's own 404.html, so this catches one level
+          # (/app/whatever) but not deeper -- which is exactly why the routes are
+          # enumerated rather than relying on it.
           cp ../dist/app/index.html ../dist/app/404.html
 
       - name: Verify the deploy directory looks right
@@ -78,14 +80,15 @@ jobs:
           test -f ../dist/_headers   || { echo "_headers missing"; exit 1; }
           test -f ../dist/app/index.html || { echo "app missing"; exit 1; }
           test -f ../dist/app/manifest.webmanifest || { echo "manifest missing"; exit 1; }
-          test -f ../dist/app/404.html || { echo "SPA fallback missing"; exit 1; }
+          test -f ../dist/app-shell.html || { echo "SPA shell missing"; exit 1; }
+          test -f ../dist/app/404.html || { echo "SPA safety net missing"; exit 1; }
           test -f ../dist/404.html || { echo "site 404 page missing"; exit 1; }
-          # A fallback that lost its script tag would serve a blank page on
-          # every deep link, and nothing else here would notice.
-          grep -q 'src="/app/assets/' ../dist/app/404.html || { echo "SPA fallback has no app bundle"; exit 1; }
-          # The rewrite that shadowed every script and the service worker parsed
-          # perfectly well, so assert the shape rather than trusting the file.
-          grep -qE '^[^#[:space:]]' ../dist/_redirects && { echo "_redirects must contain no rules -- see the file"; exit 1; }
+          # A shell that lost its script tag would serve a blank page on every
+          # deep link, and nothing else here would notice.
+          grep -q 'src="/app/assets/' ../dist/app-shell.html || { echo "SPA shell has no app bundle"; exit 1; }
+          # A catch-all rewrite parses perfectly well and silently serves HTML
+          # for every script and the service worker, so reject one outright.
+          grep -qE '^/app/\*' ../dist/_redirects && { echo "catch-all /app/* rewrite would shadow assets"; exit 1; }
           true
 
       # A direct upload rather than letting the host build from Git.
