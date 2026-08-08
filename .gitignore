@@ -9,6 +9,9 @@ Thumbs.db
 # landing page copied over it. Produced by CI, never committed.
 /dist/
 
+# wrangler's local cache, created by `wrangler pages dev`.
+.wrangler/
+
 # Master video recordings — far too big for GitHub (100MB/file hard limit).
 # The web-encoded copy that actually ships lives in app/public/video/.
 assets/video/
