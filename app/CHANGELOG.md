@@ -1,3 +1,25 @@
+# [2.0.0](https://github.com/rexmarchant/busybeegrocer/compare/v1.8.1...v2.0.0) (2026-08-08)
+
+
+* feat!: move BusyBeeGrocer to busybeegrocer.com ([b3a3dcb](https://github.com/rexmarchant/busybeegrocer/commit/b3a3dcb9de9ed7f215b3196d5ba0130b56010cd8))
+
+
+### BREAKING CHANGES
+
+* The app has moved to a new domain, and every existing
+home-screen install is orphaned by it. A PWA's identity is its origin, so an
+installed copy will go on opening the old address, will never receive another
+update, and cannot be migrated. Everyone has to delete the old icon and install
+again from busybeegrocer.com.
+
+Signed-in sessions, offline caches, store filters and any paused shopping trip
+live in per-origin storage and do not travel with it, so everyone signs in once
+more. Nothing server-side is affected: lists, items, groups and trip history are
+untouched.
+
+The manifest id is now pinned to a fixed value rather than the served path, so
+this is the last time a move costs anyone their install.
+
 ## [1.8.1](https://github.com/rexmarchant/busybeegrocer/compare/v1.8.0...v1.8.1) (2026-08-07)
 
 
