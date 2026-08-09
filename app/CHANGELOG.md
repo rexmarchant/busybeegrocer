@@ -1,3 +1,10 @@
+# [2.2.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.1.0...v2.2.0) (2026-08-09)
+
+
+### Features
+
+* rename to Busy Bee Grocer and add an intro video to the landing page ([664a808](https://github.com/rexmarchant/busybeegrocer/commit/664a8088b972582ba812f3cdc89e4f3daa3176d7))
+
 # [2.1.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.0.3...v2.1.0) (2026-08-08)
 
 
