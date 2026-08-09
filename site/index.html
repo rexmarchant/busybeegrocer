@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>BusyBeeGrocer — a shared shopping list that works without signal</title>
+    <title>Busy Bee Grocer — a shared shopping list that works without signal</title>
     <meta
       name="description"
-      content="One shopping list your whole household can edit, organised the way you actually walk the aisles — and it keeps working when the signal doesn't."
+      content="One shopping list your whole household can edit, organized the way you actually walk the aisles — and it keeps working when the signal doesn't."
     />
     <meta name="theme-color" content="#2a78d6" />
     <link rel="icon" type="image/png" href="/app/icons/icon-192.png" />
 
-    <meta property="og:title" content="BusyBeeGrocer" />
+    <meta property="og:title" content="Busy Bee Grocer" />
     <meta
       property="og:description"
       content="A shared shopping list that keeps working when you have no signal."
@@ -71,6 +71,17 @@
 
       /* ---------- sections ---------- */
       section { padding: 3.25rem 0; }
+
+      /* ---------- reel ---------- */
+      /* Plays itself once, muted, on arrival. The width/height attributes on the
+         element reserve the space before it loads, so nothing below it jumps. */
+      .reel { padding: 3rem 0 0; }
+      .reel video {
+        display: block; width: 100%; max-width: 44rem; height: auto;
+        margin: 0 auto; aspect-ratio: 16 / 9; background: #000;
+        border-radius: 1rem; border: 1px solid var(--border);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      }
       h2 { font-size: clamp(1.4rem, 4.5vw, 1.9rem); margin: 0 0 0.5rem; letter-spacing: -0.01em; }
       .lede { color: var(--ink-2); margin: 0 0 2rem; max-width: 40rem; }
 
@@ -120,15 +131,42 @@
     <header class="hero">
       <div class="wrap">
         <img class="mark" src="/app/icons/icon-512.png" alt="" />
-        <h1>BusyBeeGrocer</h1>
+        <h1>Busy Bee Grocer</h1>
         <p class="tagline">
-          One shopping list your whole household can edit — organised the way you actually walk the
+          One shopping list your whole household can edit — organized the way you actually walk the
           aisles, and still working when the signal isn't.
         </p>
-        <a class="cta" href="/app/">Open BusyBeeGrocer</a>
+        <a class="cta" href="/app/">Open Busy Bee Grocer</a>
         <small>Free. No password to remember — just your email address.</small>
       </div>
     </header>
+
+    <section class="reel">
+      <div class="wrap">
+        <!-- muted + playsinline are what make autoplay permitted at all; without
+             both, phones and desktop Chrome refuse to start it. No loop: it is
+             meant to play once and stop. -->
+        <video
+          src="/app/video/shopping_bee.mp4"
+          width="1280"
+          height="720"
+          autoplay
+          muted
+          playsinline
+          controls
+          preload="metadata"
+        ></video>
+        <script>
+          // CSS cannot cancel autoplay, so honour "reduce motion" here instead.
+          // Runs the instant the element is parsed, before playback can begin.
+          if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            var reel = document.currentScript.previousElementSibling
+            reel.autoplay = false
+            reel.pause()
+          }
+        </script>
+      </div>
+    </section>
 
     <section>
       <div class="wrap">
@@ -141,7 +179,7 @@
             <div class="emoji">🛒</div>
             <h3>One list, everyone</h3>
             <p>
-              Add something at home and it's on your partner's phone before they reach the car park.
+              Add something at home and it's on your partner's phone before they reach the parking lot.
               Everyone in the group sees the same list.
             </p>
           </div>
@@ -149,7 +187,7 @@
             <div class="emoji">📴</div>
             <h3>Works without signal</h3>
             <p>
-              Your list is kept on your phone. Tick things off in the chest freezer aisle with no
+              Your list is kept on your phone. Tick things off in the freezer aisle with no
               bars at all — it syncs itself when you're back outside.
             </p>
           </div>
@@ -213,7 +251,7 @@
         <h2>Inviting the rest of the household</h2>
         <p class="lede">
           Anyone in a group can invite someone else. It's worth knowing how that works, because
-          BusyBeeGrocer never sends the email for you.
+          Busy Bee Grocer never sends the email for you.
         </p>
         <div class="note">
           <p>
@@ -238,7 +276,7 @@
           </p>
           <p>
             We do it this way on purpose. If the app sent invitations itself it could be used to
-            mail strangers, and a message from an address you recognise lands in your inbox rather
+            mail strangers, and a message from an address you recognize lands in your inbox rather
             than a spam folder.
           </p>
         </div>

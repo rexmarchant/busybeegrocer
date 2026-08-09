@@ -114,9 +114,9 @@ export default function GroupSettings() {
     const link = inviteLink(invite.id)
     const invitedEmail = inviteEmail.trim()
     setLastInvite({ email: invitedEmail, link })
-    const subject = encodeURIComponent(`Join ${currentGroup.name} on BusyBeeGrocer`)
+    const subject = encodeURIComponent(`Join ${currentGroup.name} on Busy Bee Grocer`)
     const body = encodeURIComponent(
-      `You've been invited to join ${currentGroup.name} on BusyBeeGrocer.\n\nTap this link to join: ${link}`,
+      `You've been invited to join ${currentGroup.name} on Busy Bee Grocer.\n\nTap this link to join: ${link}`,
     )
     // A clicked anchor is less likely to trigger a full page reload on
     // mobile browsers than setting window.location.href directly.

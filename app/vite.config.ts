@@ -44,8 +44,8 @@ export default defineConfig(({ command }) => {
         registerType: 'autoUpdate',
         includeAssets: ['favicon.svg'],
         manifest: {
-          name: 'BusyBeeGrocer',
-          short_name: 'BusyBeeGrocer',
+          name: 'Busy Bee Grocer',
+          short_name: 'Busy Bee',
           description: 'Shared shopping lists for your group.',
           // A fixed string, deliberately not `base`.
           //

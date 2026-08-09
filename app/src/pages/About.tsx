@@ -34,7 +34,7 @@ export default function About() {
             outside the deployed bundle. */}
         <img
           src={`${import.meta.env.BASE_URL}promo.webp`}
-          alt="BusyBeeGrocer — the ultimate shopping list and shopping helper"
+          alt="Busy Bee Grocer — the ultimate shopping list and shopping helper"
           width={1440}
           height={1922}
           className="h-auto w-full rounded-2xl"

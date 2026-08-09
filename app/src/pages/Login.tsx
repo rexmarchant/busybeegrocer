@@ -58,7 +58,7 @@ export default function Login() {
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-3">
           <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" className="h-16 w-16 rounded-2xl" />
-          <h1 className="text-xl font-semibold text-text-primary">BusyBeeGrocer</h1>
+          <h1 className="text-xl font-semibold text-text-primary">Busy Bee Grocer</h1>
         </div>
 
         {step === 'email' ? (

@@ -202,7 +202,7 @@ export default function AcceptInvite() {
     <Centered>
       <div className="w-full max-w-sm text-center">
         <h1 className="mb-2 text-xl font-semibold text-text-primary">
-          Join {preview.group_name} on BusyBeeGrocer
+          Join {preview.group_name} on Busy Bee Grocer
         </h1>
         <p className="mb-6 text-sm text-text-secondary">
           Invited as <strong>{preview.email}</strong>

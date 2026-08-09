@@ -71,7 +71,7 @@ export default function QrModal({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 px-6 pb-10">
-        <p className="text-center text-lg font-semibold text-black">Scan to get BusyBeeGrocer</p>
+        <p className="text-center text-lg font-semibold text-black">Scan to get Busy Bee Grocer</p>
         <QrSvg text={url} />
         {/* Also spelled out, so it still works if the camera won't cooperate. */}
         <p className="break-all text-center text-sm text-neutral-600">{url}</p>

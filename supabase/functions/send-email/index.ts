@@ -2,7 +2,7 @@ import { Webhook } from 'https://esm.sh/standardwebhooks@1.0.0'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') as string
 const hookSecret = (Deno.env.get('SEND_EMAIL_HOOK_SECRET') as string).replace('v1,whsec_', '')
-const FROM_ADDRESS = Deno.env.get('EMAIL_FROM') ?? 'BusyBeeGrocer <onboarding@resend.dev>'
+const FROM_ADDRESS = Deno.env.get('EMAIL_FROM') ?? 'Busy Bee Grocer <onboarding@resend.dev>'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') as string
 
 interface EmailHookPayload {
@@ -16,20 +16,20 @@ interface EmailHookPayload {
 }
 
 function subjectFor(actionType: string) {
-  if (actionType === 'signup') return 'Welcome to BusyBeeGrocer — confirm your email'
-  if (actionType === 'invite') return "You've been invited to BusyBeeGrocer"
-  return 'Your BusyBeeGrocer sign-in link'
+  if (actionType === 'signup') return 'Welcome to Busy Bee Grocer — confirm your email'
+  if (actionType === 'invite') return "You've been invited to Busy Bee Grocer"
+  return 'Your Busy Bee Grocer sign-in link'
 }
 
 function htmlFor(actionType: string, verifyUrl: string, token: string) {
-  const heading = actionType === 'signup' ? 'Welcome to BusyBeeGrocer 🐝🛒' : 'Your sign-in link'
+  const heading = actionType === 'signup' ? 'Welcome to Busy Bee Grocer 🐝🛒' : 'Your sign-in link'
   return `
     <div style="font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; color: #0b0b0b;">
       <h2 style="margin-bottom: 8px;">${heading}</h2>
-      <p>Tap the button below to continue — it'll open BusyBeeGrocer and sign you in automatically:</p>
+      <p>Tap the button below to continue — it'll open Busy Bee Grocer and sign you in automatically:</p>
       <p style="margin: 24px 0;">
         <a href="${verifyUrl}" style="display:inline-block;background:#2a78d6;color:#ffffff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;">
-          Continue to BusyBeeGrocer
+          Continue to Busy Bee Grocer
         </a>
       </p>
       <p style="color:#52514e;font-size:13px;">Or use this one-time code if asked: <code style="background:#f4f3ec;padding:2px 6px;border-radius:4px;">${token}</code></p>

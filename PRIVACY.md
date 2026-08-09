@@ -1,9 +1,9 @@
 # Privacy
 
-BusyBeeGrocer is a personal project, not a company. This page describes exactly what it stores,
+Busy Bee Grocer is a personal project, not a company. This page describes exactly what it stores,
 who else can see it, and how to get rid of it.
 
-Last updated: 8 August 2026
+Last updated: 9 August 2026
 
 ## What is stored
 
@@ -13,7 +13,7 @@ are matched, so an invite can only be accepted by the address it was sent to.
 **A display name**, which defaults to your email address until you change it.
 
 **Everything you put in the app**: group names, list names, items, quantities, notes, the stores
-and categories you create, and which items you mark as favourites.
+and categories you create, and which items you mark as favorites.
 
 **Your shopping trips**: when a trip started and ended, how many items it covered, how many were
 ticked off, and a snapshot of the list at the end so a trip can be repeated.
@@ -56,24 +56,22 @@ sign-up attempts, which would otherwise exhaust the daily email allowance and lo
 the app version and a technical stack trace. They are configured not to attach your email address
 or other identifying details.
 
-**GitHub Pages** serves the app itself and, like any web server, sees the IP address that requests
-it.
+**Cloudflare Pages** serves the app itself and, like any web server, sees the IP address that
+requests it.
 
 ## Deleting your account
 
-Email the address at the bottom of this page and your account will be deleted, along with your
-display name and the record of it.
+Open **Settings** and choose **Delete my account**. It happens straight away — your account is
+deleted, along with your display name and the record of it. If that fails for any reason, email the
+address at the bottom of this page and it will be done by hand.
 
-Two things worth knowing before you ask:
+Two things worth knowing before you do:
 
 Content you added to a shared group — items, stores, categories — **stays with the group**, because
 other people are still using it. Your name is removed from it; the item is not.
 
 If you are the owner of a group, ownership passes to the longest-standing remaining member, so the
 group doesn't become unmanageable.
-
-There is currently no button for this in the app; it is done by hand on request. That is a
-limitation, not a policy — it is on the list to fix.
 
 ## Children
 

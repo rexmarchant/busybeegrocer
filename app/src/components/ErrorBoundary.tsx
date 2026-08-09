@@ -39,7 +39,7 @@ export default class ErrorBoundary extends Component<Props, State> {
         />
         <h1 className="text-lg font-semibold text-text-primary">Something went wrong</h1>
         <p className="max-w-sm text-sm text-text-secondary">
-          BusyBeeGrocer hit an error it couldn't recover from. Reloading usually fixes it — your
+          Busy Bee Grocer hit an error it couldn't recover from. Reloading usually fixes it — your
           lists are stored on the server, so nothing has been lost.
         </p>
 
@@ -47,7 +47,7 @@ export default class ErrorBoundary extends Component<Props, State> {
           onClick={() => window.location.reload()}
           className="mt-2 rounded-xl bg-primary px-6 py-3 text-base font-medium text-white transition hover:bg-primary-hover"
         >
-          Reload BusyBeeGrocer
+          Reload Busy Bee Grocer
         </button>
 
         {/* Collapsed by default: useless to most people, but it's the only thing

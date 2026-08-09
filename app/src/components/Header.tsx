@@ -102,7 +102,7 @@ export default function Header() {
           <span
             className={`font-semibold text-text-primary ${hasSwitcher ? 'hidden sm:inline' : ''}`}
           >
-            BusyBeeGrocer
+            Busy Bee Grocer
           </span>
         </Link>
 
