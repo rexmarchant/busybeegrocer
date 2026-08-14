@@ -190,9 +190,10 @@ It no-ops when an item already holds the requested value (migration `20260806173
 
 ## 7. Tests
 
-`npm test` — Node's built-in runner, no extra dependencies. 48 tests over the pure logic:
+`npm test` — Node's built-in runner, no extra dependencies. 54 tests over the pure logic:
 
 - `emailTypos` — sign-in address suggestions
+- `quantity` — the text-while-editing quantity field, including the backspace case
 - `offlineQueue` — queueing, superseding, replay, partial failure
 - `offlineCache` — cache envelopes and hostile input
 - `groupGate` — the routing decision that once sent people to "Create your group" while offline
