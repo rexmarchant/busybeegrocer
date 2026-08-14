@@ -5,12 +5,13 @@ import { useGroup } from '../contexts/GroupContext'
 import { useShoppingSession } from '../contexts/ShoppingSessionContext'
 import { listColorHex, listIconEmoji } from '../lib/constants'
 import {
-  NO_STORE_FILTER_KEY,
-  NO_STORE_LABEL,
+  SHOP_SORT_LABELS,
   buildBlocks,
+  describeStoreFilter,
   filterByStore,
   getAllSectionKeys,
   isBlockCollapsed,
+  shopUiStateKey,
   sortByName,
   storeFilterStateOptions,
   storeFilterStorageKey,
@@ -25,13 +26,6 @@ import { describeCacheAge, listCacheKey, readCache, writeCache, type ListSnapsho
 import CollapseHeader from '../components/CollapseHeader'
 import Toast, { useToast } from '../components/Toast'
 import type { CatalogItem, Department, ListItem, ShoppingList, Store } from '../types/database'
-
-const SHOP_SORT_LABELS: Record<Exclude<SortMode, 'favorites'>, string> = {
-  alphabetical: 'Alphabetical',
-  category: 'Category',
-  store: 'Store',
-  store_category: 'Store + Category',
-}
 
 function sessionItemsKey(sessionId: string | null) {
   return `busybeegrocer:sessionItems:${sessionId ?? 'local'}`
@@ -48,7 +42,8 @@ export default function ShoppingModePage() {
   const [catalog, setCatalog] = useState<Record<string, CatalogItem>>({})
   const [departments, setDepartments] = useState<Department[]>([])
   const [stores, setStores] = useState<Store[]>([])
-  const shopUiKey = (field: string) => (listId ? `busybeegrocer:shopUiState:${listId}:${field}` : null)
+  // Shared with the shopping preview, which shows this trip before you start it.
+  const shopUiKey = (field: string) => shopUiStateKey(listId, field)
   const [sortMode, setSortMode] = usePersistedState<Exclude<SortMode, 'favorites'>>(
     shopUiKey('sortMode'),
     'alphabetical',
@@ -380,12 +375,7 @@ export default function ShoppingModePage() {
     [items, catalog, departmentMap, storeMap, storeFilterIds],
   )
   const remaining = useMemo(() => viewItems.filter((i) => !i.is_checked), [viewItems])
-  const filterLabel = useMemo(() => {
-    if (!storeFilterIds) return null
-    const names = stores.filter((s) => storeFilterIds.has(s.id)).map((s) => s.name)
-    if (storeFilterIds.has(NO_STORE_FILTER_KEY)) names.push(NO_STORE_LABEL)
-    return names.length > 0 ? names.join(', ') : 'nothing (no stores selected)'
-  }, [storeFilterIds, stores])
+  const filterLabel = useMemo(() => describeStoreFilter(storeFilterIds, stores), [storeFilterIds, stores])
   // "In cart" is scoped to this shopping trip only — items checked off elsewhere
   // (or already checked before the trip started) aren't part of what we're
   // shopping for right now, so they shouldn't clutter this list.

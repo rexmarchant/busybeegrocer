@@ -10,10 +10,27 @@ export const SORT_LABELS: Record<SortMode, string> = {
   favorites: 'Favorites',
 }
 
+/** Shopping mode's sort options — the same set minus 'favorites', which is a
+ * list-page idea. Shared with the shopping preview so both offer the same
+ * choices under the same names. */
+export const SHOP_SORT_LABELS: Record<Exclude<SortMode, 'favorites'>, string> = {
+  alphabetical: 'Alphabetical',
+  category: 'Category',
+  store: 'Store',
+  store_category: 'Store + Category',
+}
+
 export const NO_STORE_LABEL = 'No Preferred Store'
 
 /** Filter-set member standing in for "items with no preferred store". */
 export const NO_STORE_FILTER_KEY = '__no_store__'
+
+/** Shopping mode's own persisted UI state (sort, collapsed sections). The
+ * preview reads and writes the same keys on purpose: it is a preview of the
+ * trip, so it must be grouped and sorted the way the trip will be. */
+export function shopUiStateKey(listId: string | undefined, field: string) {
+  return listId ? `busybeegrocer:shopUiState:${listId}:${field}` : null
+}
 
 /** The store filter is chosen on the list page and shared with shopping mode, so both
  * pages read/write the same persisted key. `null` means "no filter — show everything". */
@@ -29,6 +46,16 @@ export const storeFilterStateOptions = {
 export function filterByStore<T extends ViewItem>(items: T[], storeFilterIds: Set<string> | null): T[] {
   if (!storeFilterIds) return items
   return items.filter((item) => storeFilterIds.has(item.resolvedStoreId ?? NO_STORE_FILTER_KEY))
+}
+
+/** Plain-English summary of the store filter for the screens that only inherit it
+ * (shopping mode, the preview) rather than offering the controls. `null` means
+ * no filter is set and nothing needs saying. */
+export function describeStoreFilter(storeFilterIds: Set<string> | null, stores: Store[]): string | null {
+  if (!storeFilterIds) return null
+  const names = stores.filter((s) => storeFilterIds.has(s.id)).map((s) => s.name)
+  if (storeFilterIds.has(NO_STORE_FILTER_KEY)) names.push(NO_STORE_LABEL)
+  return names.length > 0 ? names.join(', ') : 'nothing (no stores selected)'
 }
 
 export interface ViewItem extends ListItem {

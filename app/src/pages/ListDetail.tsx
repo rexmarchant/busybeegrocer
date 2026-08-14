@@ -28,6 +28,7 @@ import { describeCacheAge, listCacheKey, readCache, writeCache, type ListSnapsho
 import CollapseHeader from '../components/CollapseHeader'
 import ConfirmModal from '../components/ConfirmModal'
 import IconPicker from '../components/IconPicker'
+import ShoppingPreview from '../components/ShoppingPreview'
 import Toast, { useToast } from '../components/Toast'
 import type { CatalogItem, Department, ListIcon, ListItem, ShoppingList, Store } from '../types/database'
 
@@ -64,6 +65,7 @@ export default function ListDetail() {
   const [showIconPicker, setShowIconPicker] = useState(false)
   const [showQuickList, setShowQuickList] = usePersistedState<boolean>(uiKey('showQuickList'), false)
   const [quickListItems, setQuickListItems] = useState<(ListItem & { name: string })[]>([])
+  const [showShoppingPreview, setShowShoppingPreview] = useState(false)
   const [showNotes, setShowNotes] = usePersistedState<boolean>(uiKey('showNotes'), false)
   const [showStoreFilter, setShowStoreFilter] = usePersistedState<boolean>(uiKey('showStoreFilter'), false)
   const [storeFilterIds, setStoreFilterIds] = usePersistedState<Set<string> | null>(
@@ -508,6 +510,13 @@ export default function ListDetail() {
           >
             {showQuickList ? 'Hide' : '⚡'} Quick List
           </button>
+          <button
+            onClick={() => setShowShoppingPreview(true)}
+            aria-label="Shopping preview"
+            className="flex-1 rounded-xl border border-border py-2.5 text-sm text-text-secondary"
+          >
+            👁 Shop Preview
+          </button>
         </div>
 
         {showQuickList && (
@@ -679,6 +688,18 @@ export default function ListDetail() {
           </ul>
         )}
       </main>
+
+      {showShoppingPreview && (
+        <ShoppingPreview
+          list={list}
+          items={viewItems}
+          stores={stores}
+          storeFilterIds={storeFilterIds}
+          startLabel={isResuming ? 'Resume shopping' : 'Start shopping'}
+          onClose={() => setShowShoppingPreview(false)}
+          onStartShopping={() => navigate(`/lists/${list.id}/shop`)}
+        />
+      )}
 
       {showAddItem && (
         <AddItemModal
