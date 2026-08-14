@@ -113,6 +113,9 @@ export default function Settings() {
           <p className="text-sm text-text-muted">
             Version {__APP_VERSION__} (build {__BUILD_NUMBER__}) · {new Date(__BUILD_DATE__).toLocaleDateString()}
           </p>
+          <Link to="/releases" className="text-sm text-primary underline">
+            Release History
+          </Link>
         </div>
       </main>
 

@@ -5,6 +5,7 @@ import { useGroup } from './contexts/GroupContext'
 import { groupGate } from './lib/groupGate'
 import Login from './pages/Login'
 import Privacy from './pages/Privacy'
+import Releases from './pages/Releases'
 import AcceptInvite from './pages/AcceptInvite'
 import About from './pages/About'
 import GroupSetup from './pages/GroupSetup'
@@ -77,6 +78,9 @@ export default function App() {
       {/* No RequireAuth: you should be able to read what the app collects
           before handing over your email address, not after. */}
       <Route path="/privacy" element={<Privacy />} />
+      {/* No RequireAuth either: "what changed in this version?" is a fair
+          question to be able to send someone a link to. */}
+      <Route path="/releases" element={<Releases />} />
       <Route path="/join/:inviteId" element={<AcceptInvite />} />
 
       <Route
