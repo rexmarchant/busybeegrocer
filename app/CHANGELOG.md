@@ -1,3 +1,10 @@
+# [2.4.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.3.0...v2.4.0) (2026-08-14)
+
+
+### Features
+
+* add a Release History page, generated from the changelog ([5ee0571](https://github.com/rexmarchant/busybeegrocer/commit/5ee0571084747bca8c44c7facc72c2adcb4b791c))
+
 # [2.3.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.2.0...v2.3.0) (2026-08-14)
 
 
