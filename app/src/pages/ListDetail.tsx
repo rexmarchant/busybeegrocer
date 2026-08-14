@@ -20,6 +20,7 @@ import {
   type SortMode,
   type ViewItem,
 } from '../lib/itemGrouping'
+import { normalizeQuantity, sanitizeQuantityInput } from '../lib/quantity'
 import { usePersistedState } from '../lib/usePersistedState'
 import { isNetworkFailure, useOfflineQueue } from '../lib/useOfflineQueue'
 import { applyQueuedToggles, loadQueue } from '../lib/offlineQueue'
@@ -871,7 +872,8 @@ function AddItemModal({
   }) => void
 }) {
   const [name, setName] = useState('')
-  const [quantity, setQuantity] = useState(1)
+  // Text, not a number — see lib/quantity.ts for why.
+  const [quantity, setQuantity] = useState('1')
   const [departmentId, setDepartmentId] = useState('')
   const [storeId, setStoreId] = useState('')
   const [note, setNote] = useState('')
@@ -885,7 +887,7 @@ function AddItemModal({
       setPendingBlankConfirm(true)
       return
     }
-    onAdd({ name, departmentId, storeId, note, quantity: quantity || 1 })
+    onAdd({ name, departmentId, storeId, note, quantity: normalizeQuantity(quantity) })
   }
 
   return (
@@ -919,10 +921,15 @@ function AddItemModal({
           <label className="flex w-20 flex-col gap-1.5 text-sm text-text-secondary">
             Qty
             <input
-              type="number"
-              min={1}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={quantity}
-              onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
+              // Focusing selects what's there, so typing a new number replaces it
+              // rather than landing beside it and making 12 out of 1 and 2.
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => setQuantity(sanitizeQuantityInput(e.target.value))}
+              onBlur={() => setQuantity((q) => String(normalizeQuantity(q)))}
               className="rounded-xl border border-border bg-page px-3 py-2 text-text-primary outline-none focus:border-primary"
             />
           </label>
@@ -1024,7 +1031,8 @@ function ItemInfoModal({
   }) => void
 }) {
   const [name, setName] = useState(item.name)
-  const [quantity, setQuantity] = useState(item.quantity)
+  // Text, not a number — see lib/quantity.ts for why.
+  const [quantity, setQuantity] = useState(String(item.quantity))
   const [note, setNote] = useState(item.note ?? '')
   const [departmentId, setDepartmentId] = useState('')
   const [storeId, setStoreId] = useState(item.resolvedStoreId ?? '')
@@ -1051,10 +1059,15 @@ function ItemInfoModal({
           <label className="flex w-20 flex-col gap-1.5 text-sm text-text-secondary">
             Qty
             <input
-              type="number"
-              min={1}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={quantity}
-              onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
+              // Focusing selects what's there, so typing a new number replaces it
+              // rather than landing beside it and making 12 out of 1 and 2.
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => setQuantity(sanitizeQuantityInput(e.target.value))}
+              onBlur={() => setQuantity((q) => String(normalizeQuantity(q)))}
               className="rounded-xl border border-border bg-page px-3 py-2 text-text-primary outline-none focus:border-primary"
             />
           </label>
@@ -1116,7 +1129,9 @@ function ItemInfoModal({
             Close
           </button>
           <button
-            onClick={() => onSave({ name: name.trim(), note, departmentId, storeId, quantity })}
+            onClick={() =>
+              onSave({ name: name.trim(), note, departmentId, storeId, quantity: normalizeQuantity(quantity) })
+            }
             className="flex-1 rounded-xl bg-primary py-2.5 font-medium text-white"
           >
             Save
