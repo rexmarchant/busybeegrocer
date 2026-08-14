@@ -1,3 +1,15 @@
+# [2.3.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.2.0...v2.3.0) (2026-08-14)
+
+
+### Bug Fixes
+
+* let the item quantity actually be changed ([5d5c5dd](https://github.com/rexmarchant/busybeegrocer/commit/5d5c5ddeb8a9d53fbf4e586e13b3d8a427546e78))
+
+
+### Features
+
+* add a read-only Shopping Preview to the list screen ([cdea7a4](https://github.com/rexmarchant/busybeegrocer/commit/cdea7a4d67eebe1f9a713b3608deab5039bbee7e))
+
 # [2.2.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.1.0...v2.2.0) (2026-08-09)
 
 
