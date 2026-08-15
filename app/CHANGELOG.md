@@ -1,3 +1,10 @@
+# [2.6.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.5.0...v2.6.0) (2026-08-15)
+
+
+### Features
+
+* simplify the lists screen and move reordering and deleting into Settings ([bb57e62](https://github.com/rexmarchant/busybeegrocer/commit/bb57e624efacf4e6786a1f9cc901551ca633b040))
+
 # [2.5.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.4.0...v2.5.0) (2026-08-15)
 
 
