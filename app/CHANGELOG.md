@@ -1,3 +1,10 @@
+# [2.7.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.6.0...v2.7.0) (2026-08-15)
+
+
+### Features
+
+* rework the list screen — Sort and Filter menus; Add Item, Frequently Bought and Shop Preview share one row; per-list settings moved to Manage all lists; checked items fade rather than strike through; lifetime counts off the rows; bigger arrows; clearer store and category headers; members shown by name ([2eb83fe](https://github.com/rexmarchant/busybeegrocer/commit/2eb83fe9d2b907b12d5b708b353328fe5f9a6619))
+
 # [2.6.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.5.0...v2.6.0) (2026-08-15)
 
 
