@@ -30,7 +30,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Assemble the shell
         run: |
           mkdir -p out/icons
@@ -44,8 +44,8 @@ jobs:
           # browsers still running it never fetch this and the old worker goes
           # on serving the old app from cache forever.
           cp redirect-shell/sw.js out/sw.js
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: out
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
