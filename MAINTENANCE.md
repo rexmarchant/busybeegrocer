@@ -197,10 +197,13 @@ It no-ops when an item already holds the requested value (migration `20260806175
 
 ## 7. Tests
 
-`npm test` — Node's built-in runner, no extra dependencies. 75 tests over the pure logic:
+`npm test` — Node's built-in runner, no extra dependencies. 85 tests over the pure logic:
 
 - `emailTypos` — sign-in address suggestions
 - `quantity` — the text-while-editing quantity field, including the backspace case
+- `personName` — how group members are named to each other: addresses shown as
+  the part before the @, falling back to the full address when two people in the
+  same group would otherwise read as one
 - `frequentlyBought` — the frequency-plus-recency ranking behind the Frequently
   Bought panel, including the case it exists for (a big tally that stopped losing
   to a smaller one that didn't) and the pre-migration fallback

@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import Header from '../components/Header'
 import TutorialModal from '../components/TutorialModal'
 import ConfirmModal from '../components/ConfirmModal'
+import { ArrowLeft, Chevron } from '../components/Icons'
 
 const DELETE_WARNING =
   'This permanently deletes your account and removes your name from everything you have added. ' +
@@ -47,7 +48,7 @@ export default function Settings() {
       <Header />
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-6">
         <Link to="/" className="mb-4 inline-flex items-center gap-1 text-text-secondary">
-          <span className="text-2xl leading-none">←</span> Your Lists
+          <ArrowLeft /> Your Lists
         </Link>
         <h1 className="mb-4 text-lg font-semibold text-text-primary">Settings</h1>
 
@@ -59,30 +60,30 @@ export default function Settings() {
         <nav className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
           <Link to="/settings/groups" className="flex items-center justify-between px-4 py-3.5">
             <span className="text-text-primary">Groups</span>
-            <span className="text-sm text-text-muted">{currentGroup?.name} ›</span>
+            <span className="flex min-w-0 items-center gap-1 text-sm text-text-muted"><span className="truncate">{currentGroup?.name}</span><Chevron direction="right" className="h-6 w-6 shrink-0" /></span>
           </Link>
           <Link to="/settings/lists" className="flex items-center justify-between px-4 py-3.5">
             <span className="text-text-primary">Manage all lists</span>
-            <span className="text-text-muted">›</span>
+            <Chevron direction="right" className="h-6 w-6 shrink-0 text-text-muted" />
           </Link>
           <Link to="/settings/stores" className="flex items-center justify-between px-4 py-3.5">
             <span className="text-text-primary">Stores</span>
-            <span className="text-text-muted">›</span>
+            <Chevron direction="right" className="h-6 w-6 shrink-0 text-text-muted" />
           </Link>
           <Link to="/settings/categories" className="flex items-center justify-between px-4 py-3.5">
             <span className="text-text-primary">Categories</span>
-            <span className="text-text-muted">›</span>
+            <Chevron direction="right" className="h-6 w-6 shrink-0 text-text-muted" />
           </Link>
           <button
             onClick={() => setShowTutorial(true)}
             className="flex items-center justify-between px-4 py-3.5 text-left"
           >
             <span className="text-text-primary">🎬 Tutorial</span>
-            <span className="text-text-muted">›</span>
+            <Chevron direction="right" className="h-6 w-6 shrink-0 text-text-muted" />
           </button>
           <Link to="/privacy" className="flex items-center justify-between px-4 py-3.5">
             <span className="text-text-primary">Privacy</span>
-            <span className="text-text-muted">›</span>
+            <Chevron direction="right" className="h-6 w-6 shrink-0 text-text-muted" />
           </Link>
         </nav>
 

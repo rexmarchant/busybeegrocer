@@ -68,7 +68,17 @@ export interface ViewItem extends ListItem {
 }
 
 export type Block<T extends ViewItem = ViewItem> =
-  | { type: 'header'; level: 1 | 2; label: string; sectionKey: string; parentKey?: string }
+  // `kind` is what the header *is*, which is not the same as its nesting level:
+  // sorting by category alone puts categories at level 1. Presentation keys off
+  // kind (stores shout in caps, categories don't) and structure keys off level.
+  | {
+      type: 'header'
+      level: 1 | 2
+      kind: 'store' | 'category'
+      label: string
+      sectionKey: string
+      parentKey?: string
+    }
   | { type: 'item'; item: T; sectionKey: string; parentKey?: string }
 
 /** Given the currently-collapsed section keys, is this block hidden? A block is hidden
@@ -104,7 +114,7 @@ export function buildCategoryBlocks<T extends ViewItem>(items: T[]): Block<T>[] 
   const blocks: Block<T>[] = []
   for (const [label, group] of ordered) {
     const sectionKey = `cat:${label}`
-    blocks.push({ type: 'header', level: 1, label, sectionKey })
+    blocks.push({ type: 'header', level: 1, kind: 'category', label, sectionKey })
     for (const item of sortByName(group.items)) blocks.push({ type: 'item', item, sectionKey })
   }
   return blocks
@@ -125,7 +135,7 @@ export function buildStoreBlocks<T extends ViewItem>(items: T[]): Block<T>[] {
   const blocks: Block<T>[] = []
   for (const [label, groupItems] of ordered) {
     const sectionKey = `store:${label}`
-    blocks.push({ type: 'header', level: 1, label, sectionKey })
+    blocks.push({ type: 'header', level: 1, kind: 'store', label, sectionKey })
     for (const item of sortByName(groupItems)) blocks.push({ type: 'item', item, sectionKey })
   }
   return blocks
@@ -146,7 +156,7 @@ export function buildStoreCategoryBlocks<T extends ViewItem>(items: T[]): Block<
   const blocks: Block<T>[] = []
   for (const [storeLabel, storeItems] of orderedStores) {
     const storeKey = `store:${storeLabel}`
-    blocks.push({ type: 'header', level: 1, label: storeLabel, sectionKey: storeKey })
+    blocks.push({ type: 'header', level: 1, kind: 'store', label: storeLabel, sectionKey: storeKey })
     const catGroups = new Map<string, { sortOrder: number; items: T[] }>()
     for (const item of storeItems) {
       const key = item.departmentName
@@ -156,7 +166,14 @@ export function buildStoreCategoryBlocks<T extends ViewItem>(items: T[]): Block<
     const orderedCats = [...catGroups.entries()].sort((a, b) => a[1].sortOrder - b[1].sortOrder)
     for (const [catLabel, catGroup] of orderedCats) {
       const catKey = `${storeKey}::cat:${catLabel}`
-      blocks.push({ type: 'header', level: 2, label: catLabel, sectionKey: catKey, parentKey: storeKey })
+      blocks.push({
+        type: 'header',
+        level: 2,
+        kind: 'category',
+        label: catLabel,
+        sectionKey: catKey,
+        parentKey: storeKey,
+      })
       for (const item of sortByName(catGroup.items))
         blocks.push({ type: 'item', item, sectionKey: catKey, parentKey: storeKey })
     }

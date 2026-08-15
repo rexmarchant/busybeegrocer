@@ -7,6 +7,7 @@ import { useGroupMembers } from '../lib/hooks'
 import { suggestEmailCorrection } from '../lib/emailTypos'
 import ConfirmModal from '../components/ConfirmModal'
 import type { GroupRole, Invite, Profile } from '../types/database'
+import { ArrowLeft } from '../components/Icons'
 
 export default function GroupSettings() {
   const { user } = useAuth()
@@ -157,7 +158,7 @@ export default function GroupSettings() {
   return (
     <div className="mx-auto flex min-h-svh w-full max-w-2xl flex-1 flex-col bg-page px-4 py-6">
       <Link to="/settings" className="mb-4 inline-flex items-center gap-1 text-text-secondary">
-        <span className="text-2xl leading-none">←</span> Settings
+        <ArrowLeft /> Settings
       </Link>
       <h1 className="mb-4 text-lg font-semibold text-text-primary">Groups</h1>
 

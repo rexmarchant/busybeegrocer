@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import QrModal from '../components/QrModal'
+import { ArrowLeft } from '../components/Icons'
 
 export default function About() {
   const navigate = useNavigate()
@@ -13,7 +14,7 @@ export default function About() {
           onClick={() => navigate(-1)}
           className="inline-flex items-center gap-1 text-text-secondary"
         >
-          <span className="text-2xl leading-none">←</span> Back
+          <ArrowLeft /> Back
         </button>
 
         {/* Generated on device rather than baked into the poster, so it always

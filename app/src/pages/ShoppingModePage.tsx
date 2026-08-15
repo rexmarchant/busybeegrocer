@@ -534,9 +534,12 @@ export default function ShoppingModePage() {
             <ul className="flex flex-col gap-1.5">
               {inCart.map((item) => (
                 <li key={item.id}>
+                  {/* Faded rather than struck through, matching the list screen:
+                      an item in the cart should recede, and a line drawn across
+                      it does the opposite. */}
                   <button
                     onClick={() => toggle(item)}
-                    className="flex w-full items-center gap-3 rounded-xl border border-border bg-page px-3 py-3 text-left"
+                    className="flex w-full items-center gap-3 rounded-xl border border-border bg-page px-3 py-3 text-left opacity-55 transition-opacity"
                   >
                     <span
                       className="flex h-5 w-5 items-center justify-center rounded-full text-xs text-white"
@@ -544,7 +547,7 @@ export default function ShoppingModePage() {
                     >
                       ✓
                     </span>
-                    <span className="flex-1 text-text-muted line-through">{item.name}</span>
+                    <span className="flex-1 text-text-secondary">{item.name}</span>
                   </button>
                 </li>
               ))}

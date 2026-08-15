@@ -28,12 +28,60 @@ import { applyQueuedToggles, loadQueue } from '../lib/offlineQueue'
 import { describeCacheAge, listCacheKey, readCache, writeCache, type ListSnapshot } from '../lib/offlineCache'
 import CollapseHeader from '../components/CollapseHeader'
 import ConfirmModal from '../components/ConfirmModal'
+import Menu, { MenuItem } from '../components/Menu'
+import { ArrowLeft, Chevron } from '../components/Icons'
 import IconPicker from '../components/IconPicker'
 import ShoppingPreview from '../components/ShoppingPreview'
 import Toast, { useToast } from '../components/Toast'
 import type { CatalogItem, Department, ListIcon, ListItem, ShoppingList, Store } from '../types/database'
 
 const EMPTY_SECTION_SET = new Set<string>()
+
+/** The sort modes this screen offers.
+ *
+ * 'favorites' is deliberately not among them any more. It was a *sort* that
+ * floated starred items to the top, which sat oddly beside four real orderings;
+ * starring is now a filter, under Filter, where it shows only what you starred.
+ * The mode still exists in itemGrouping so an old persisted preference keeps
+ * rendering rather than crashing — normalizeSortMode below retires it on sight. */
+const LIST_SORT_LABELS = {
+  alphabetical: SORT_LABELS.alphabetical,
+  category: SORT_LABELS.category,
+  store: SORT_LABELS.store,
+  store_category: SORT_LABELS.store_category,
+} as const
+
+type ListSortMode = keyof typeof LIST_SORT_LABELS
+
+const DEFAULT_SORT: ListSortMode = 'store_category'
+
+function normalizeSortMode(mode: SortMode): ListSortMode {
+  return mode in LIST_SORT_LABELS ? (mode as ListSortMode) : DEFAULT_SORT
+}
+
+/** The sort preference moved to a new storage key, and this is why.
+ *
+ * usePersistedState writes on mount, so merely *opening* a list stamped the
+ * then-default 'alphabetical' into storage. Every existing list therefore has a
+ * saved preference that nobody ever chose, and a new default would never be
+ * reached. Reading from a fresh key sidesteps that — and the old key is still
+ * consulted once, so a deliberate Category/Store/Store+Category choice carries
+ * over. Only 'alphabetical' is discarded, because it is indistinguishable from
+ * the default that wrote itself. */
+function initialSortMode(sortKey: string | null, legacyKey: string | null): ListSortMode {
+  if (!sortKey || !legacyKey) return DEFAULT_SORT
+  try {
+    if (localStorage.getItem(sortKey) !== null) return DEFAULT_SORT // the hook will read it
+    const legacy = localStorage.getItem(legacyKey)
+    if (legacy !== null) {
+      const value = JSON.parse(legacy) as SortMode
+      if (value !== 'alphabetical') return normalizeSortMode(value)
+    }
+  } catch {
+    // Unreadable storage is not a reason to fail to render a list.
+  }
+  return DEFAULT_SORT
+}
 
 
 export default function ListDetail() {
@@ -50,7 +98,13 @@ export default function ListDetail() {
   const [departments, setDepartments] = useState<Department[]>([])
   const [stores, setStores] = useState<Store[]>([])
   const uiKey = (field: string) => (listId ? `busybeegrocer:listUiState:${listId}:${field}` : null)
-  const [sortMode, setSortMode] = usePersistedState<SortMode>(uiKey('sortMode'), 'alphabetical')
+  const sortDefault = useMemo(
+    () => initialSortMode(uiKey('sortOrder'), uiKey('sortMode')),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [listId],
+  )
+  const [storedSortMode, setSortMode] = usePersistedState<SortMode>(uiKey('sortOrder'), sortDefault)
+  const sortMode = normalizeSortMode(storedSortMode)
   const { toast, showToast, clearToast } = useToast()
   const { pendingCount, queueToggle } = useOfflineQueue(() => {
     loadAll()
@@ -59,10 +113,9 @@ export default function ListDetail() {
   const [showAddItem, setShowAddItem] = useState(false)
   const [infoItemId, setInfoItemId] = useState<string | null>(null)
   const [removeConfirmItem, setRemoveConfirmItem] = useState<ViewItem | null>(null)
-  const [confirmAction, setConfirmAction] = useState<'reset' | 'checkAll' | null>(null)
+  const [confirmCheckAll, setConfirmCheckAll] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
-  const [showListSettings, setShowListSettings] = useState(false)
   const [showIconPicker, setShowIconPicker] = useState(false)
   const [showFrequentlyBought, setShowFrequentlyBought] = usePersistedState<boolean>(
     uiKey('showFrequentlyBought'),
@@ -71,6 +124,7 @@ export default function ListDetail() {
   const [frequentItems, setFrequentItems] = useState<(ListItem & { name: string })[]>([])
   const [showShoppingPreview, setShowShoppingPreview] = useState(false)
   const [showNotes, setShowNotes] = usePersistedState<boolean>(uiKey('showNotes'), false)
+  const [favoritesOnly, setFavoritesOnly] = usePersistedState<boolean>(uiKey('favoritesOnly'), false)
   const [showStoreFilter, setShowStoreFilter] = usePersistedState<boolean>(uiKey('showStoreFilter'), false)
   const [storeFilterIds, setStoreFilterIds] = usePersistedState<Set<string> | null>(
     listId ? storeFilterStorageKey(listId) : null,
@@ -212,10 +266,15 @@ export default function ListDetail() {
     [items, catalog, departmentMap, storeMap],
   )
 
-  const viewItems: ViewItem[] = useMemo(
-    () => filterByStore(allViewItems, storeFilterIds),
-    [allViewItems, storeFilterIds],
-  )
+  const viewItems: ViewItem[] = useMemo(() => {
+    const byStore = filterByStore(allViewItems, storeFilterIds)
+    return favoritesOnly ? byStore.filter((i) => i.is_favorite) : byStore
+  }, [allViewItems, storeFilterIds, favoritesOnly])
+
+  /** What the Filter button counts. The store picker being *open* isn't a
+   * filter; having chosen stores in it is. */
+  const activeFilterCount =
+    (favoritesOnly ? 1 : 0) + (showNotes ? 1 : 0) + (storeFilterIds ? 1 : 0)
 
   function toggleSection(key: string) {
     setCollapsedSections((prev) => {
@@ -336,61 +395,10 @@ export default function ListDetail() {
     loadAll()
   }
 
-  async function handleTogglePrivate() {
-    if (!listId || !list) return
-    await supabase.from('lists').update({ is_private: !list.is_private }).eq('id', listId)
-    loadAll()
-  }
-
-  async function handleDuplicate() {
-    if (!listId || !list || !currentGroup || !user) return
-    const { data: existingLists } = await supabase
-      .from('lists')
-      .select('sort_order')
-      .eq('group_id', currentGroup.id)
-    const nextSortOrder =
-      existingLists && existingLists.length > 0 ? Math.max(...existingLists.map((l) => l.sort_order)) + 1 : 0
-
-    const { data: newList, error } = await supabase
-      .from('lists')
-      .insert({
-        group_id: currentGroup.id,
-        owner_id: user.id,
-        name: `${list.name} (copy)`,
-        icon: list.icon,
-        color: list.color,
-        is_private: list.is_private,
-        sort_order: nextSortOrder,
-      })
-      .select()
-      .single()
-    if (error || !newList) return
-
-    for (const item of items) {
-      await supabase.from('list_items').insert({
-        list_id: newList.id,
-        catalog_item_id: item.catalog_item_id,
-        quantity: item.quantity,
-        note: item.note,
-        preferred_store_id: item.preferred_store_id,
-        added_by: user.id,
-        last_modified_by: user.id,
-      })
-    }
-    navigate(`/lists/${newList.id}`)
-  }
-
-  async function handleResetCounts() {
-    if (!listId) return
-    await supabase.rpc('reset_list_item_counts', { p_list_id: listId })
-    setConfirmAction(null)
-    loadAll()
-  }
-
   async function handleCheckAll() {
     if (!listId) return
     await supabase.rpc('check_all_list_items', { p_list_id: listId })
-    setConfirmAction(null)
+    setConfirmCheckAll(false)
     loadAll()
   }
 
@@ -412,8 +420,8 @@ export default function ListDetail() {
           <p className="mx-auto mb-1 max-w-2xl text-xs text-text-muted">{currentGroup.name}</p>
         )}
         <div className="mx-auto flex max-w-2xl items-center gap-3">
-          <Link to="/" className="shrink-0 text-2xl text-text-secondary">
-            ←
+          <Link to="/" aria-label="Back to your lists" className="shrink-0 text-text-secondary">
+            <ArrowLeft />
           </Link>
           <button
             onClick={() => isOwner && setShowIconPicker(true)}
@@ -458,13 +466,6 @@ export default function ListDetail() {
             🔍
           </button>
           <button
-            onClick={() => setShowListSettings(true)}
-            aria-label="List settings"
-            className="shrink-0 text-xl text-text-secondary"
-          >
-            ⚙️
-          </button>
-          <button
             onClick={() => navigate(`/lists/${list.id}/shop`)}
             aria-label={isResuming ? 'Resume shopping' : 'Start shopping'}
             className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
@@ -495,42 +496,41 @@ export default function ListDetail() {
       </header>
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-4">
-        <button
-          onClick={() => setShowAddItem(true)}
-          className="mb-4 w-full rounded-xl bg-primary py-2.5 font-medium text-white"
-        >
-          + Add Item
-        </button>
+        {/* Three tiers of emphasis, deliberately: one filled button for the
+            thing you came here to do, two soft-blue ones for the panels you
+            open beside it, and outlined controls below for changing the view.
+            Add Item keeps half the row; Frequently Bought and Shop Preview
+            split the rest evenly so neither reads as the lesser of the two. */}
+        {/* min-w on the two soft buttons is what stops "Frequently" being cut in
+            half on a 320px screen: below that width they wrap to their own line
+            and split it evenly instead of clipping. From 360px up they sit
+            beside Add Item as intended.
 
-        {/* "Frequently Bought" is too long to sit on one line in a third of a
-            phone's width, so all three labels are text-xs and allowed to wrap
-            onto two. The row gets taller; nothing gets wider.
-
-            The open/shut marker is a triangle rather than an emoji or the word
-            "Hide" on purpose. At 320px an emoji is wide enough to be pushed
-            onto a line of its own, making the button three lines shut and two
-            open — so the row changed height as you toggled it, under your
-            thumb. A triangle is narrow enough that both states wrap the same
-            way, and gluing the emoji to the first word instead overflows into
-            the next button. Checked at 320/360/390/414. */}
-        <div className="mb-4 flex gap-2">
+            Frequently Bought carries no chevron. One would cost ~18px of a
+            ~70px label area — the single thing that made the text clip — and
+            the panel being open is already shown by filling the button, which
+            is both louder and free. */}
+        <div className="mb-2 flex flex-wrap items-stretch gap-2">
           <button
-            onClick={() => setConfirmAction('checkAll')}
-            className="min-w-0 flex-1 rounded-xl border border-border px-2 py-2.5 text-xs leading-tight text-text-secondary"
+            onClick={() => setShowAddItem(true)}
+            className="w-full shrink-0 rounded-xl bg-primary py-2.5 font-medium text-white min-[360px]:w-1/2"
           >
-            ✓ Check all
+            + Add Item
           </button>
           <button
             onClick={() => setShowFrequentlyBought((v) => !v)}
             aria-expanded={showFrequentlyBought}
-            className="min-w-0 flex-1 rounded-xl border border-border px-2 py-2.5 text-xs leading-tight text-text-secondary"
+            className={`min-w-[4.5rem] flex-1 rounded-xl border px-1.5 py-2.5 text-xs leading-tight ${
+              showFrequentlyBought
+                ? 'border-primary bg-primary text-white'
+                : 'border-primary-soft-border bg-primary-soft text-primary-hover'
+            }`}
           >
-            {showFrequentlyBought ? '▴' : '▾'} Frequently Bought
+            Frequently Bought
           </button>
           <button
             onClick={() => setShowShoppingPreview(true)}
-            aria-label="Shopping preview"
-            className="min-w-0 flex-1 rounded-xl border border-border px-2 py-2.5 text-xs leading-tight text-text-secondary"
+            className="min-w-[4.5rem] flex-1 rounded-xl border border-primary-soft-border bg-primary-soft px-1.5 py-2.5 text-xs leading-tight text-primary-hover"
           >
             👁 Shop Preview
           </button>
@@ -577,40 +577,111 @@ export default function ListDetail() {
           />
         )}
 
-        {/* sort control + notes toggle */}
-        <div className="mb-3 flex flex-wrap gap-1 text-xs">
-          {(Object.keys(SORT_LABELS) as SortMode[]).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setSortMode(mode)}
-              className={`rounded-full px-3 py-1.5 ${
-                sortMode === mode ? 'bg-primary text-white' : 'bg-surface text-text-secondary'
-              }`}
-            >
-              {SORT_LABELS[mode]}
-            </button>
-          ))}
-          <button
-            onClick={() => setShowNotes((v) => !v)}
-            className={`rounded-full px-3 py-1.5 ${
-              showNotes ? 'bg-primary text-white' : 'bg-surface text-text-secondary'
-            }`}
+        {/* Two menus rather than a wrapping strip of nine chips. The strip made
+            every option shout equally and, at four sort modes plus three
+            filters, took two lines before a single item was on screen. */}
+        <div className="mb-3 flex gap-2">
+          <Menu
+            className="min-w-0 flex-1"
+            label={
+              <>
+                <span className="min-w-0 truncate">Sort: {LIST_SORT_LABELS[sortMode]}</span>
+                <Chevron className="h-4 w-4 shrink-0" />
+              </>
+            }
           >
-            📝 Notes
-          </button>
-          <button
-            onClick={() => setShowStoreFilter((v) => !v)}
-            className={`rounded-full px-3 py-1.5 ${
-              storeFilterIds ? 'bg-primary text-white' : 'bg-surface text-text-secondary'
-            }`}
+            {(close) => (
+              <>
+                {(Object.keys(LIST_SORT_LABELS) as ListSortMode[]).map((mode) => (
+                  <MenuItem
+                    key={mode}
+                    selected={sortMode === mode}
+                    onClick={() => {
+                      setSortMode(mode)
+                      close()
+                    }}
+                  >
+                    {LIST_SORT_LABELS[mode]}
+                  </MenuItem>
+                ))}
+              </>
+            )}
+          </Menu>
+
+          <Menu
+            className="min-w-0 flex-1"
+            align="right"
+            active={activeFilterCount > 0}
+            label={
+              <>
+                <span className="min-w-0 truncate">
+                  Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+                </span>
+                <Chevron className="h-4 w-4 shrink-0" />
+              </>
+            }
           >
-            🔎 Filter{storeFilterIds ? ` (${storeFilterIds.size})` : ''}
-          </button>
-          {blocks.some((b) => b.type === 'header') && (
-            <button onClick={toggleCollapseAll} className="rounded-full bg-surface px-3 py-1.5 text-text-secondary">
-              {collapsedSections.size > 0 ? 'Expand all' : 'Collapse all'}
-            </button>
-          )}
+            {() => (
+              <>
+                {/* Left open on purpose: filters are usually set in twos and
+                    threes, and closing after each one means reopening. */}
+                <MenuItem selected={favoritesOnly} onClick={() => setFavoritesOnly((v) => !v)}>
+                  ★ Favorites
+                </MenuItem>
+                <MenuItem selected={showNotes} onClick={() => setShowNotes((v) => !v)}>
+                  📝 Notes
+                </MenuItem>
+                <MenuItem
+                  selected={!!storeFilterIds}
+                  onClick={() => setShowStoreFilter((v) => !v)}
+                >
+                  🏬 Store filter{storeFilterIds ? ` (${storeFilterIds.size})` : ''}
+                </MenuItem>
+                {activeFilterCount > 0 && (
+                  <MenuItem
+                    onClick={() => {
+                      setFavoritesOnly(false)
+                      setShowNotes(false)
+                      setStoreFilterIds(null)
+                      setShowStoreFilter(false)
+                    }}
+                  >
+                    Clear filters
+                  </MenuItem>
+                )}
+              </>
+            )}
+          </Menu>
+
+          <Menu
+            ariaLabel="More actions"
+            align="right"
+            className="w-11 shrink-0"
+            label={<span className="text-lg leading-none">☰</span>}
+          >
+            {(close) => (
+              <>
+                <MenuItem
+                  onClick={() => {
+                    close()
+                    setConfirmCheckAll(true)
+                  }}
+                >
+                  ✓ Check all
+                </MenuItem>
+                {blocks.some((b) => b.type === 'header') && (
+                  <MenuItem
+                    onClick={() => {
+                      close()
+                      toggleCollapseAll()
+                    }}
+                  >
+                    {collapsedSections.size > 0 ? 'Expand all' : 'Collapse all'}
+                  </MenuItem>
+                )}
+              </>
+            )}
+          </Menu>
         </div>
 
         {/* Say plainly that this is a saved copy. A list that silently might be
@@ -698,7 +769,6 @@ export default function ListDetail() {
                   onToggleChecked={() => toggleChecked(block.item)}
                   onToggleFavorite={() => toggleFavorite(block.item)}
                   onInfo={() => setInfoItemId(block.item.id)}
-                  onRemove={() => setRemoveConfirmItem(block.item)}
                 />
               )
             })}
@@ -739,6 +809,10 @@ export default function ListDetail() {
           departments={departments}
           stores={stores}
           onClose={() => setInfoItemId(null)}
+          onRemove={() => {
+            setInfoItemId(null)
+            setRemoveConfirmItem(infoItem)
+          }}
           onSave={async ({ name, note, departmentId, storeId, quantity }) => {
             await supabase
               .from('catalog_items')
@@ -756,21 +830,6 @@ export default function ListDetail() {
               .eq('id', infoItem.id)
             setInfoItemId(null)
             loadAll()
-          }}
-        />
-      )}
-
-      {showListSettings && (
-        <ListSettingsModal
-          list={list}
-          isOwner={isOwner}
-          members={members}
-          onClose={() => setShowListSettings(false)}
-          onTogglePrivate={handleTogglePrivate}
-          onDuplicate={handleDuplicate}
-          onResetCounts={() => {
-            setShowListSettings(false)
-            setConfirmAction('reset')
           }}
         />
       )}
@@ -801,24 +860,14 @@ export default function ListDetail() {
         />
       )}
 
-      {confirmAction === 'reset' && (
-        <ConfirmModal
-          title="Reset all counts?"
-          message="This zeroes out the lifetime checked/unchecked tally for every item on this list, and empties Frequently Bought with it. This cannot be undone."
-          confirmLabel="Reset counts"
-          danger
-          onConfirm={handleResetCounts}
-          onCancel={() => setConfirmAction(null)}
-        />
-      )}
-      {confirmAction === 'checkAll' && (
+      {confirmCheckAll && (
         <ConfirmModal
           title="Check all items?"
           message={`This marks all ${uncheckedCount} unchecked item${uncheckedCount === 1 ? '' : 's'} on this list as checked.`}
           confirmLabel="Check all"
           danger
           onConfirm={handleCheckAll}
-          onCancel={() => setConfirmAction(null)}
+          onCancel={() => setConfirmCheckAll(false)}
         />
       )}
     </div>
@@ -831,17 +880,19 @@ function ItemRow({
   onToggleChecked,
   onToggleFavorite,
   onInfo,
-  onRemove,
 }: {
   item: ViewItem
   color: string
   onToggleChecked: () => void
   onToggleFavorite: () => void
   onInfo: () => void
-  onRemove: () => void
 }) {
   return (
-    <li className="flex items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5">
+    <li
+      className={`flex items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 transition-opacity ${
+        item.is_checked ? 'opacity-55' : ''
+      }`}
+    >
       <input
         type="checkbox"
         checked={item.is_checked}
@@ -849,13 +900,16 @@ function ItemRow({
         className="h-5 w-5 accent-current"
         style={{ color }}
       />
+      {/* Checked items fade rather than strike through. Strikethrough draws the
+          eye — a rule straight across the word is more visual noise, not less —
+          where the point of checking something off is for it to stop competing
+          with what you still need. The lifetime tallies that used to sit here
+          are still counted; they are just a statistic, and not one worth a
+          bracket beside every line. */}
       <div className="flex-1">
-        <span className={item.is_checked ? 'text-text-muted line-through' : 'text-text-primary'}>
+        <span className={item.is_checked ? 'text-text-secondary' : 'text-text-primary'}>
           {item.name}
           {item.quantity > 1 && <span className="text-text-secondary"> — Qty: {item.quantity}</span>}
-        </span>{' '}
-        <span className="text-xs text-text-muted">
-          ({item.checked_count}/{item.unchecked_count})
         </span>
       </div>
       <button
@@ -871,9 +925,6 @@ function ItemRow({
         className="flex h-6 w-6 items-center justify-center rounded-full border border-border text-xs text-text-muted"
       >
         i
-      </button>
-      <button onClick={onRemove} aria-label="Remove" className="text-text-muted">
-        ✕
       </button>
     </li>
   )
@@ -1041,6 +1092,7 @@ function ItemInfoModal({
   departments,
   stores,
   onClose,
+  onRemove,
   onSave,
 }: {
   item: ViewItem
@@ -1049,6 +1101,7 @@ function ItemInfoModal({
   departments: Department[]
   stores: Store[]
   onClose: () => void
+  onRemove: () => void
   onSave: (values: {
     name: string
     note: string
@@ -1132,15 +1185,26 @@ function ItemInfoModal({
           </label>
         </div>
 
-        <dl className="mb-4 grid grid-cols-2 gap-y-2 text-sm">
-          <dt className="text-text-muted">Added by</dt>
-          <dd className="text-text-primary">{profileLabel(members, item.added_by, selfId)}</dd>
-          <dt className="text-text-muted">Added on</dt>
-          <dd className="text-text-primary">{new Date(item.added_at).toLocaleDateString()}</dd>
-          <dt className="text-text-muted">Last modified by</dt>
-          <dd className="text-text-primary">{profileLabel(members, item.last_modified_by, selfId)}</dd>
-          <dt className="text-text-muted">Last modified</dt>
-          <dd className="text-text-primary">{new Date(item.last_modified_at).toLocaleDateString()}</dd>
+        {/* `min-w-0` on the grid columns is the fix for a long address running
+            off the side of the modal: a grid track's default minimum is its
+            content, so an unbreakable string like an email widens the column
+            instead of wrapping. break-words then lets it wrap mid-address —
+            emails have no spaces to break at. */}
+        <dl className="mb-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
+          <dt className="min-w-0 text-text-muted">Added by</dt>
+          <dd className="min-w-0 break-words text-text-primary">
+            {profileLabel(members, item.added_by, selfId)}
+          </dd>
+          <dt className="min-w-0 text-text-muted">Added on</dt>
+          <dd className="min-w-0 text-text-primary">{new Date(item.added_at).toLocaleDateString()}</dd>
+          <dt className="min-w-0 text-text-muted">Last modified by</dt>
+          <dd className="min-w-0 break-words text-text-primary">
+            {profileLabel(members, item.last_modified_by, selfId)}
+          </dd>
+          <dt className="min-w-0 text-text-muted">Last modified</dt>
+          <dd className="min-w-0 text-text-primary">
+            {new Date(item.last_modified_at).toLocaleDateString()}
+          </dd>
         </dl>
         <label className="mb-4 flex flex-col gap-1.5 text-sm text-text-secondary">
           Note
@@ -1151,6 +1215,16 @@ function ItemInfoModal({
             className="rounded-xl border border-border bg-page px-3 py-2 text-text-primary outline-none focus:border-primary"
           />
         </label>
+        {/* Where the row's ✕ went. Same action, same confirmation — but reached
+            deliberately, from inside the item, rather than sitting beside the
+            favourite star where a mis-tap removed something silently. */}
+        <button
+          onClick={onRemove}
+          className="mb-4 w-full rounded-xl border border-status-critical/40 py-2.5 text-sm text-status-critical"
+        >
+          Remove from list
+        </button>
+
         <div className="flex gap-2">
           <button onClick={onClose} className="flex-1 rounded-xl border border-border py-2.5 text-text-secondary">
             Close
@@ -1164,70 +1238,6 @@ function ItemInfoModal({
             Save
           </button>
         </div>
-      </div>
-    </div>
-  )
-}
-
-function ListSettingsModal({
-  list,
-  isOwner,
-  members,
-  onClose,
-  onTogglePrivate,
-  onDuplicate,
-  onResetCounts,
-}: {
-  list: ShoppingList
-  isOwner: boolean
-  members: ReturnType<typeof useGroupMembers>['members']
-  onClose: () => void
-  onTogglePrivate: () => void
-  onDuplicate: () => void
-  onResetCounts: () => void
-}) {
-  return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/30 px-6">
-      <div className="w-full max-w-sm rounded-2xl bg-surface p-6">
-        <h3 className="mb-3 text-lg font-semibold text-text-primary">List settings</h3>
-
-        <p className="mb-1.5 text-sm font-medium text-text-secondary">Shared with</p>
-        {list.is_private ? (
-          <p className="mb-4 text-sm text-text-secondary">This list is private — only you can see it.</p>
-        ) : (
-          <ul className="mb-4 flex flex-col gap-1 text-sm text-text-primary">
-            {members.map((m) => (
-              <li key={m.id}>{m.display_name || m.email}</li>
-            ))}
-          </ul>
-        )}
-
-        {isOwner && (
-          <div className="mb-4 flex flex-col divide-y divide-border overflow-hidden rounded-xl border border-border">
-            <button onClick={onTogglePrivate} className="px-4 py-3 text-left text-text-primary">
-              Make {list.is_private ? 'shared' : 'private'}
-            </button>
-            <button onClick={onDuplicate} className="px-4 py-3 text-left text-text-primary">
-              Duplicate list
-            </button>
-            <button onClick={onResetCounts} className="px-4 py-3 text-left text-text-primary">
-              Reset counts
-            </button>
-          </div>
-        )}
-
-        {/* Deleting moved to Settings → Manage all lists. It sat one tap from
-            "Reset counts" here, and it is not a thing you should be able to do
-            by accident while looking at the list it would destroy. */}
-        {isOwner && (
-          <p className="mb-4 text-sm text-text-muted">
-            To delete this list, go to Settings → Manage all lists.
-          </p>
-        )}
-
-        <button onClick={onClose} className="w-full rounded-xl border border-border py-2.5 text-text-secondary">
-          Close
-        </button>
       </div>
     </div>
   )

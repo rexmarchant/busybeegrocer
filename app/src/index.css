@@ -17,6 +17,21 @@
   --color-primary: #2a78d6;
   --color-primary-hover: #1c5cab;
 
+  /* Secondary actions: the same blue family, quiet enough that the one filled
+     primary button still reads as the primary. Text is deliberately the darker
+     --color-primary-hover rather than --color-primary — on this fill that is
+     5.4:1 against 3.5:1, so the labels clear AA instead of just missing it. */
+  --color-primary-soft: #dbe9f9;
+  --color-primary-soft-border: #b9d4f0;
+
+  /* Grouping headers. The two levels used to be one fill at 100% and 60% alpha,
+     which on the page background were barely a shade apart — you could not tell
+     at a glance whether a header opened a store or a category inside one. These
+     step away from the page (#e7e5df) in opposite directions instead: the major
+     band clearly darker, the minor one only just tinted. */
+  --color-section-major: #bcb8ab;
+  --color-section-minor: #dedbd3;
+
   /* categorical list colors — fixed order, never cycled */
   --color-list-blue: #2a78d6;
   --color-list-green: #008300;

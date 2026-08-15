@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 // than keeping a second copy means the policy can never disagree with itself.
 import privacySource from '../../../PRIVACY.md?raw'
 import { parseMarkdown, type MdSegment } from '../lib/markdown'
+import { ArrowLeft } from '../components/Icons'
 
 // Parsed once at module load: the document never changes at runtime.
 const blocks = parseMarkdown(privacySource)
@@ -35,7 +36,7 @@ export default function Privacy() {
           onClick={() => navigate(-1)}
           className="inline-flex items-center gap-1 text-text-secondary"
         >
-          <span className="text-2xl leading-none">←</span> Back
+          <ArrowLeft /> Back
         </button>
       </header>
 

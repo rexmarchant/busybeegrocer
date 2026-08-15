@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 // without anyone editing this page. See lib/releaseNotes.ts.
 import changelogSource from '../../CHANGELOG.md?raw'
 import { buildReleaseHistory, type ChangeKind } from '../lib/releaseNotes'
+import { ArrowLeft } from '../components/Icons'
 
 const KIND_STYLES: Record<ChangeKind, string> = {
   feature: 'bg-primary/10 text-primary',
@@ -42,7 +43,7 @@ export default function Releases() {
           onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/'))}
           className="inline-flex items-center gap-1 text-text-secondary"
         >
-          <span className="text-2xl leading-none">←</span> Back
+          <ArrowLeft /> Back
         </button>
       </header>
 

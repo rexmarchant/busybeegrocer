@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import type { GroupMemberProfile, GroupRole, Profile } from '../types/database'
+import { personLabel } from './personName'
 
 export function useGroupMembers(groupId: string | undefined) {
   const [members, setMembers] = useState<GroupMemberProfile[]>([])
@@ -46,6 +47,8 @@ export function useOnlineStatus() {
 export function profileLabel(profiles: Profile[], userId: string | null | undefined, selfId?: string) {
   if (!userId) return 'Unknown'
   if (userId === selfId) return 'You'
-  const p = profiles.find((m) => m.id === userId)
-  return p?.display_name || p?.email || 'Someone'
+  // The whole set is passed in, not just the one profile, so a name that would
+  // be ambiguous alongside someone else falls back to the full address — see
+  // lib/personName.ts.
+  return personLabel(profiles, profiles.find((m) => m.id === userId))
 }

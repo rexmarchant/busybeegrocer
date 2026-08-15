@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { ArrowLeft } from './Icons'
 
 // Served straight out of app/public/video/ — BASE_URL covers the /busybeegrocer/
 // subpath in the Pages build. The source recording lives in assets/video/ and is
@@ -20,7 +21,7 @@ export default function TutorialModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-40 flex flex-col bg-black">
       <div className="flex shrink-0 items-center gap-3 px-4 py-3">
         <button onClick={onClose} className="flex items-center gap-1.5 text-white" aria-label="Back">
-          <span className="text-2xl leading-none">←</span>
+          <ArrowLeft />
           <span className="text-sm font-medium">Back</span>
         </button>
         <p className="text-sm text-white/70">Tutorial</p>

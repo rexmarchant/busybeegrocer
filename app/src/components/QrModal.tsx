@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { encode } from 'uqr'
+import { ArrowLeft } from './Icons'
 
 /** Where the QR points.
  *
@@ -65,7 +66,7 @@ export default function QrModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-40 flex flex-col bg-white">
       <div className="flex shrink-0 items-center gap-3 px-4 py-3">
         <button onClick={onClose} className="flex items-center gap-1.5 text-black" aria-label="Back">
-          <span className="text-2xl leading-none">←</span>
+          <ArrowLeft />
           <span className="text-sm font-medium">Back</span>
         </button>
       </div>
