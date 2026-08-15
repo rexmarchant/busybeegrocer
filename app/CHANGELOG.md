@@ -1,3 +1,10 @@
+# [2.5.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.4.0...v2.5.0) (2026-08-15)
+
+
+### Features
+
+* rank Frequently Bought by how recently you buy things, not just how often ([9a1f859](https://github.com/rexmarchant/busybeegrocer/commit/9a1f85902f0c175cf24a934f320346380ad373cc))
+
 # [2.4.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.3.0...v2.4.0) (2026-08-14)
 
 
