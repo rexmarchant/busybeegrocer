@@ -16,7 +16,6 @@ export default function ListsHome() {
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
-  const [editOrder, setEditOrder] = useState(false)
 
   useEffect(() => {
     if (!currentGroup) return
@@ -53,24 +52,6 @@ export default function ListsHome() {
     setLoading(false)
   }
 
-  async function moveList(index: number, direction: -1 | 1) {
-    const targetIndex = index + direction
-    if (targetIndex < 0 || targetIndex >= lists.length) return
-    const a = lists[index]
-    const b = lists[targetIndex]
-
-    // Optimistic local swap so it feels instant, then persist.
-    const reordered = [...lists]
-    reordered[index] = b
-    reordered[targetIndex] = a
-    setLists(reordered)
-
-    await Promise.all([
-      supabase.from('lists').update({ sort_order: b.sort_order }).eq('id', a.id),
-      supabase.from('lists').update({ sort_order: a.sort_order }).eq('id', b.id),
-    ])
-  }
-
   const nextSortOrder = lists.length > 0 ? Math.max(...lists.map((l) => l.sort_order)) + 1 : 0
 
   return (
@@ -79,24 +60,15 @@ export default function ListsHome() {
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-6">
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-lg font-semibold text-text-primary">Your Lists</h1>
-          <div className="flex gap-2">
-            {lists.length > 1 && (
-              <button
-                onClick={() => setEditOrder((v) => !v)}
-                className={`rounded-full px-4 py-2 text-sm font-medium ${
-                  editOrder ? 'bg-primary text-white' : 'border border-border text-text-secondary'
-                }`}
-              >
-                {editOrder ? 'Done' : 'Reorder'}
-              </button>
-            )}
-            <button
-              onClick={() => setShowCreate(true)}
-              className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white"
-            >
-              + New list
-            </button>
-          </div>
+          {/* Reordering and deleting now live together under Settings → Manage
+              all lists. They are both rare, and both were cluttering the screen
+              you actually use every day. */}
+          <button
+            onClick={() => setShowCreate(true)}
+            className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white"
+          >
+            + New list
+          </button>
         </div>
 
         {loading ? (
@@ -104,60 +76,40 @@ export default function ListsHome() {
         ) : lists.length === 0 ? (
           <p className="text-text-secondary">No lists yet — create your first one.</p>
         ) : (
-          <div className={editOrder ? 'grid grid-cols-1 gap-3' : 'grid grid-cols-1 gap-3 sm:grid-cols-2'}>
-            {lists.map((list, index) =>
-              editOrder ? (
-                <div
-                  key={list.id}
-                  className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-4"
-                  style={{ borderLeft: `6px solid ${listColorHex(list.color)}` }}
-                >
-                  <span className="text-2xl">{listIconEmoji(list.icon)}</span>
-                  <span className="flex-1 font-medium text-text-primary">{list.name}</span>
-                  <div className="flex flex-col gap-1">
-                    <button
-                      onClick={() => moveList(index, -1)}
-                      disabled={index === 0}
-                      aria-label="Move up"
-                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-text-secondary disabled:opacity-30"
-                    >
-                      ▲
-                    </button>
-                    <button
-                      onClick={() => moveList(index, 1)}
-                      disabled={index === lists.length - 1}
-                      aria-label="Move down"
-                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-text-secondary disabled:opacity-30"
-                    >
-                      ▼
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <Link
-                  key={list.id}
-                  to={`/lists/${list.id}`}
-                  className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-4 transition hover:shadow-sm"
-                  style={{ borderLeft: `6px solid ${listColorHex(list.color)}` }}
-                >
-                  <span className="text-2xl">{listIconEmoji(list.icon)}</span>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-text-primary">{list.name}</span>
-                      {list.is_private && (
-                        <span className="rounded-full bg-page px-2 py-0.5 text-xs text-text-muted">
-                          Private
-                        </span>
-                      )}
-                    </div>
-                    {list.owner_id !== user?.id && (
-                      <span className="text-xs text-text-muted">Shared with you</span>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {lists.map((list) => (
+              <Link
+                key={list.id}
+                to={`/lists/${list.id}`}
+                // px stays at 4; only the vertical padding comes off, which is
+                // all that drives the row's height.
+                className="flex items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-2.5 transition hover:shadow-sm"
+                style={{ borderLeft: `6px solid ${listColorHex(list.color)}` }}
+              >
+                <span className="text-2xl">{listIconEmoji(list.icon)}</span>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-text-primary">{list.name}</span>
+                    {list.is_private && (
+                      <span className="rounded-full bg-page px-2 py-0.5 text-xs text-text-muted">
+                        Private
+                      </span>
                     )}
                   </div>
-                  <span className="text-sm text-text-secondary">{counts[list.id] ?? 0} items</span>
-                </Link>
-              ),
-            )}
+                  {list.owner_id !== user?.id && (
+                    <span className="text-xs text-text-muted">Shared with you</span>
+                  )}
+                </div>
+                {/* Nothing rather than "0 items". An empty list has nothing
+                    worth saying about it, and a column of zeroes reads as
+                    clutter on the screen you look at most. */}
+                {counts[list.id] > 0 && (
+                  <span className="shrink-0 text-sm text-text-secondary">
+                    {counts[list.id]} item{counts[list.id] === 1 ? '' : 's'}
+                  </span>
+                )}
+              </Link>
+            ))}
           </div>
         )}
       </main>

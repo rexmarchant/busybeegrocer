@@ -7,41 +7,6 @@ import { useOnlineStatus } from '../lib/hooks'
 import { listColorHex, listIconEmoji } from '../lib/constants'
 import type { ShoppingList } from '../types/database'
 
-export function useGroupItemCount(groupId: string | undefined) {
-  const [count, setCount] = useState<number | null>(null)
-
-  useEffect(() => {
-    if (!groupId) {
-      setCount(null)
-      return
-    }
-    let cancelled = false
-
-    async function load() {
-      const { count: c } = await supabase
-        .from('list_items')
-        .select('id, lists!inner(group_id)', { count: 'exact', head: true })
-        .eq('lists.group_id', groupId)
-        .is('removed_at', null)
-        .eq('is_checked', false)
-      if (!cancelled) setCount(c ?? 0)
-    }
-    load()
-
-    const channel = supabase
-      .channel(`list-items-count-${groupId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'list_items' }, load)
-      .subscribe()
-
-    return () => {
-      cancelled = true
-      supabase.removeChannel(channel)
-    }
-  }, [groupId])
-
-  return count
-}
-
 function ResumeShoppingBanner() {
   const { activeSession } = useShoppingSession()
   const location = useLocation()
@@ -79,13 +44,15 @@ function ResumeShoppingBanner() {
 
 export default function Header() {
   const { currentGroup, groups, setCurrentGroupId } = useGroup()
-  const itemCount = useGroupItemCount(currentGroup?.id)
   const online = useOnlineStatus()
   const location = useLocation()
   // On Settings itself the gear would just link to the page you're already on,
   // so it reads as a dead button. Sub-pages keep it — there it navigates up.
   const onSettingsPage = location.pathname === '/settings'
-  const hasSwitcher = groups.length > 1 && !!currentGroup
+  // The group switcher lives on Settings alone. Switching group isn't something
+  // you do on the way to a list, and on a phone it was one more thing competing
+  // for the width the list names actually need.
+  const hasSwitcher = onSettingsPage && groups.length > 1 && !!currentGroup
 
   return (
     <div className="sticky top-0 z-10">
@@ -112,13 +79,7 @@ export default function Header() {
               ● Offline
             </span>
           )}
-          {itemCount !== null && (
-            <span className="shrink-0 rounded-full bg-page px-3 py-1 text-sm font-medium whitespace-nowrap text-text-secondary">
-              {itemCount} item{itemCount === 1 ? '' : 's'}
-            </span>
-          )}
-
-          {groups.length > 1 && currentGroup && (
+          {hasSwitcher && currentGroup && (
             // The one element allowed to give: group names are arbitrary and
             // can be long, so this truncates instead of shoving the gear out.
             <select

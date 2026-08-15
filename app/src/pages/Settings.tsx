@@ -61,6 +61,10 @@ export default function Settings() {
             <span className="text-text-primary">Groups</span>
             <span className="text-sm text-text-muted">{currentGroup?.name} ›</span>
           </Link>
+          <Link to="/settings/lists" className="flex items-center justify-between px-4 py-3.5">
+            <span className="text-text-primary">Manage all lists</span>
+            <span className="text-text-muted">›</span>
+          </Link>
           <Link to="/settings/stores" className="flex items-center justify-between px-4 py-3.5">
             <span className="text-text-primary">Stores</span>
             <span className="text-text-muted">›</span>

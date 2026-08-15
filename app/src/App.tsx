@@ -14,6 +14,7 @@ import ListDetail from './pages/ListDetail'
 import ShoppingModePage from './pages/ShoppingModePage'
 import Settings from './pages/Settings'
 import GroupSettings from './pages/GroupSettings'
+import ManageLists from './pages/ManageLists'
 import StoreSettings from './pages/StoreSettings'
 import CategorySettings from './pages/CategorySettings'
 
@@ -146,6 +147,16 @@ export default function App() {
         element={
           <RequireAuth>
             <GroupSettings />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/settings/lists"
+        element={
+          <RequireAuth>
+            <RequireGroup>
+              <ManageLists />
+            </RequireGroup>
           </RequireAuth>
         }
       />

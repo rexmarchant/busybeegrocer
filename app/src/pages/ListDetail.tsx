@@ -59,7 +59,7 @@ export default function ListDetail() {
   const [showAddItem, setShowAddItem] = useState(false)
   const [infoItemId, setInfoItemId] = useState<string | null>(null)
   const [removeConfirmItem, setRemoveConfirmItem] = useState<ViewItem | null>(null)
-  const [confirmAction, setConfirmAction] = useState<'delete' | 'reset' | 'checkAll' | null>(null)
+  const [confirmAction, setConfirmAction] = useState<'reset' | 'checkAll' | null>(null)
   const [renaming, setRenaming] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [showListSettings, setShowListSettings] = useState(false)
@@ -378,12 +378,6 @@ export default function ListDetail() {
       })
     }
     navigate(`/lists/${newList.id}`)
-  }
-
-  async function handleDelete() {
-    if (!listId) return
-    await supabase.from('lists').delete().eq('id', listId)
-    navigate('/')
   }
 
   async function handleResetCounts() {
@@ -778,10 +772,6 @@ export default function ListDetail() {
             setShowListSettings(false)
             setConfirmAction('reset')
           }}
-          onDelete={() => {
-            setShowListSettings(false)
-            setConfirmAction('delete')
-          }}
         />
       )}
 
@@ -811,16 +801,6 @@ export default function ListDetail() {
         />
       )}
 
-      {confirmAction === 'delete' && (
-        <ConfirmModal
-          title="Delete this list?"
-          message="This permanently deletes the list and all its items. This cannot be undone."
-          confirmLabel="Delete"
-          danger
-          onConfirm={handleDelete}
-          onCancel={() => setConfirmAction(null)}
-        />
-      )}
       {confirmAction === 'reset' && (
         <ConfirmModal
           title="Reset all counts?"
@@ -1197,7 +1177,6 @@ function ListSettingsModal({
   onTogglePrivate,
   onDuplicate,
   onResetCounts,
-  onDelete,
 }: {
   list: ShoppingList
   isOwner: boolean
@@ -1206,7 +1185,6 @@ function ListSettingsModal({
   onTogglePrivate: () => void
   onDuplicate: () => void
   onResetCounts: () => void
-  onDelete: () => void
 }) {
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/30 px-6">
@@ -1235,10 +1213,16 @@ function ListSettingsModal({
             <button onClick={onResetCounts} className="px-4 py-3 text-left text-text-primary">
               Reset counts
             </button>
-            <button onClick={onDelete} className="px-4 py-3 text-left text-status-critical">
-              Delete list
-            </button>
           </div>
+        )}
+
+        {/* Deleting moved to Settings → Manage all lists. It sat one tap from
+            "Reset counts" here, and it is not a thing you should be able to do
+            by accident while looking at the list it would destroy. */}
+        {isOwner && (
+          <p className="mb-4 text-sm text-text-muted">
+            To delete this list, go to Settings → Manage all lists.
+          </p>
         )}
 
         <button onClick={onClose} className="w-full rounded-xl border border-border py-2.5 text-text-secondary">
