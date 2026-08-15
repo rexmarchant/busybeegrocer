@@ -5,7 +5,7 @@
 -- once, with no way to hand it over. Everything hung off it -- the Owner badge,
 -- and remove_group_member(), which refused unless created_by = auth.uid(). If
 -- that person left, nobody could manage the group at all. Migration
--- 20260806015412 patched the worst of it by making the departure trigger rewrite
+-- 20260806020359 patched the worst of it by making the departure trigger rewrite
 -- created_by, but that is a workaround for a missing concept rather than a
 -- design.
 --

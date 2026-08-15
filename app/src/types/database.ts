@@ -121,6 +121,12 @@ export interface ListItem {
   is_favorite: boolean
   checked_count: number
   unchecked_count: number
+  /** When this item was last checked off. Null until it has been bought once. */
+  last_checked_at: string | null
+  /** Decayed purchase count behind the Frequently Bought ranking — see
+   * lib/frequentlyBought.ts. Read it through `purchaseScore`, never raw: the
+   * stored value is only current as of `last_checked_at`. */
+  purchase_score: number
   removed_at: string | null
   added_by: string
   added_at: string

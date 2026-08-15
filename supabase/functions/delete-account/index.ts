@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
   // ownership to the longest-standing remaining member. Everything else that
   // referenced this user (items added, stores created, past trips) is set to
   // null by the foreign keys, so the group keeps the content and loses only the
-  // attribution. See migration 20260806015412.
+  // attribution. See migration 20260806020359.
   const { error: deleteError } = await admin.auth.admin.deleteUser(user.id)
 
   if (deleteError) {

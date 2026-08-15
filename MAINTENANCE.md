@@ -186,18 +186,24 @@ See section 4.
 `redirect-shell/sw.js` retires the service worker that installed copies still run. Without it those copies serve a cached app indefinitely and never learn anything moved.
 
 **7. The offline queue depends on `toggle_list_item_checked` being idempotent.**
-It no-ops when an item already holds the requested value (migration `20260806173725`). Undo that and replayed offline changes corrupt the lifetime tallies.
+It no-ops when an item already holds the requested value (migration `20260806175526`). Undo that and replayed offline changes corrupt the lifetime tallies — and now the Frequently Bought ranking, which the same statement maintains.
 
 **8. The Turnstile site key is hardcoded** in `app/src/components/Captcha.tsx`, deliberately. It is public, and an env var that failed to arrive in CI would lock everyone out rather than degrade.
+
+**9. The Frequently Bought half-life is written in two places.**
+90 days, in migration `20260815125948` and in `app/src/lib/frequentlyBought.ts`. Postgres can't share a constant with the browser, so it is duplicated. Change one without the other and the stored score and the displayed score stop measuring the same thing. There's a test for the half-life, but nothing can check the two match — only reading both.
 
 ---
 
 ## 7. Tests
 
-`npm test` — Node's built-in runner, no extra dependencies. 65 tests over the pure logic:
+`npm test` — Node's built-in runner, no extra dependencies. 75 tests over the pure logic:
 
 - `emailTypos` — sign-in address suggestions
 - `quantity` — the text-while-editing quantity field, including the backspace case
+- `frequentlyBought` — the frequency-plus-recency ranking behind the Frequently
+  Bought panel, including the case it exists for (a big tally that stopped losing
+  to a smaller one that didn't) and the pre-migration fallback
 - `releaseNotes` — the changelog parser behind the Release History page, including a
   check that the real `CHANGELOG.md` still parses and reaches back to 1.0.0
 - `offlineQueue` — queueing, superseding, replay, partial failure

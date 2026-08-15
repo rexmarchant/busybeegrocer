@@ -6,7 +6,7 @@
  * signal. Now the intent is kept and replayed when the network returns.
  *
  * Replay is only safe because toggle_list_item_checked is idempotent (see
- * migration 20260806173725): calling it with the value an item already has does
+ * migration 20260806175526): calling it with the value an item already has does
  * nothing, so a replayed operation can never inflate the lifetime tallies. */
 
 const QUEUE_KEY = 'busybeegrocer:mutationQueue'

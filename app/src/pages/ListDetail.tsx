@@ -20,6 +20,7 @@ import {
   type SortMode,
   type ViewItem,
 } from '../lib/itemGrouping'
+import { FREQUENTLY_BOUGHT_LIMIT, rankFrequentlyBought } from '../lib/frequentlyBought'
 import { normalizeQuantity, sanitizeQuantityInput } from '../lib/quantity'
 import { usePersistedState } from '../lib/usePersistedState'
 import { isNetworkFailure, useOfflineQueue } from '../lib/useOfflineQueue'
@@ -63,8 +64,11 @@ export default function ListDetail() {
   const [nameDraft, setNameDraft] = useState('')
   const [showListSettings, setShowListSettings] = useState(false)
   const [showIconPicker, setShowIconPicker] = useState(false)
-  const [showQuickList, setShowQuickList] = usePersistedState<boolean>(uiKey('showQuickList'), false)
-  const [quickListItems, setQuickListItems] = useState<(ListItem & { name: string })[]>([])
+  const [showFrequentlyBought, setShowFrequentlyBought] = usePersistedState<boolean>(
+    uiKey('showFrequentlyBought'),
+    false,
+  )
+  const [frequentItems, setFrequentItems] = useState<(ListItem & { name: string })[]>([])
   const [showShoppingPreview, setShowShoppingPreview] = useState(false)
   const [showNotes, setShowNotes] = usePersistedState<boolean>(uiKey('showNotes'), false)
   const [showStoreFilter, setShowStoreFilter] = usePersistedState<boolean>(uiKey('showStoreFilter'), false)
@@ -118,13 +122,13 @@ export default function ListDetail() {
     setStores(data.stores)
   }
 
-  // Quick List's open/closed state is persisted, so a remount with it already
-  // open (e.g. coming back from Shopping mode) needs to (re)fetch its data —
-  // it isn't persisted itself, only the panel's open/closed toggle is.
+  // Frequently Bought's open/closed state is persisted, so a remount with it
+  // already open (e.g. coming back from Shopping mode) needs to (re)fetch its
+  // data — it isn't persisted itself, only the panel's open/closed toggle is.
   useEffect(() => {
-    if (showQuickList) loadQuickList()
+    if (showFrequentlyBought) loadFrequentlyBought()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showQuickList, listId, catalog])
+  }, [showFrequentlyBought, listId, catalog])
 
   async function loadAll() {
     if (!listId || !currentGroup) return
@@ -159,30 +163,37 @@ export default function ListDetail() {
     setStaleSince(null)
   }
 
-  async function loadQuickList() {
+  async function loadFrequentlyBought() {
     if (!listId) return
-    // Every item ever bought on this list, most-frequent first — including
-    // ones already on the list (shown as "on list") or already checked off
-    // (tapping "+ Add" un-checks / re-adds them).
+    // Everything ever bought on this list, ranked by how often *and* how
+    // recently — including items already on the list (shown as "on list") or
+    // already checked off (tapping "+ Add" un-checks / re-adds them).
+    //
+    // Ranking happens here rather than in the query because the score keeps
+    // falling with time and the database only holds its value as of the last
+    // purchase — see lib/frequentlyBought.ts.
+    //
+    // The 200 is a candidate cap, not the panel's size. It only bites on a list
+    // with more than 200 items that have ever been bought, and what it drops is
+    // the least-bought of them.
     const { data } = await supabase
       .from('list_items')
       .select('*')
       .eq('list_id', listId)
+      .gt('checked_count', 0)
       .order('checked_count', { ascending: false })
-      .limit(25)
-    const view = ((data as ListItem[]) ?? [])
-      .filter((i) => i.checked_count > 0)
-      .map((i) => ({ ...i, name: catalog[i.catalog_item_id]?.name ?? '(unknown item)' }))
-    setQuickListItems(view)
+      .limit(200)
+    const ranked = rankFrequentlyBought((data as ListItem[]) ?? [], Date.now(), FREQUENTLY_BOUGHT_LIMIT)
+    setFrequentItems(ranked.map((i) => ({ ...i, name: catalog[i.catalog_item_id]?.name ?? '(unknown item)' })))
   }
 
-  async function quickAdd(item: ListItem) {
+  async function addFromFrequentlyBought(item: ListItem) {
     await supabase
       .from('list_items')
       .update({ removed_at: null, is_checked: false, last_modified_by: user?.id, last_modified_at: new Date().toISOString() })
       .eq('id', item.id)
     loadAll()
-    loadQuickList()
+    loadFrequentlyBought()
   }
 
   const departmentMap = useMemo(() => {
@@ -497,51 +508,66 @@ export default function ListDetail() {
           + Add Item
         </button>
 
+        {/* "Frequently Bought" is too long to sit on one line in a third of a
+            phone's width, so all three labels are text-xs and allowed to wrap
+            onto two. The row gets taller; nothing gets wider.
+
+            The open/shut marker is a triangle rather than an emoji or the word
+            "Hide" on purpose. At 320px an emoji is wide enough to be pushed
+            onto a line of its own, making the button three lines shut and two
+            open — so the row changed height as you toggled it, under your
+            thumb. A triangle is narrow enough that both states wrap the same
+            way, and gluing the emoji to the first word instead overflows into
+            the next button. Checked at 320/360/390/414. */}
         <div className="mb-4 flex gap-2">
           <button
             onClick={() => setConfirmAction('checkAll')}
-            className="flex-1 rounded-xl border border-border py-2.5 text-sm text-text-secondary"
+            className="min-w-0 flex-1 rounded-xl border border-border px-2 py-2.5 text-xs leading-tight text-text-secondary"
           >
             ✓ Check all
           </button>
           <button
-            onClick={() => setShowQuickList((v) => !v)}
-            className="flex-1 rounded-xl border border-border py-2.5 text-sm text-text-secondary"
+            onClick={() => setShowFrequentlyBought((v) => !v)}
+            aria-expanded={showFrequentlyBought}
+            className="min-w-0 flex-1 rounded-xl border border-border px-2 py-2.5 text-xs leading-tight text-text-secondary"
           >
-            {showQuickList ? 'Hide' : '⚡'} Quick List
+            {showFrequentlyBought ? '▴' : '▾'} Frequently Bought
           </button>
           <button
             onClick={() => setShowShoppingPreview(true)}
             aria-label="Shopping preview"
-            className="flex-1 rounded-xl border border-border py-2.5 text-sm text-text-secondary"
+            className="min-w-0 flex-1 rounded-xl border border-border px-2 py-2.5 text-xs leading-tight text-text-secondary"
           >
             👁 Shop Preview
           </button>
         </div>
 
-        {showQuickList && (
+        {showFrequentlyBought && (
           <ul className="mb-4 flex flex-col gap-1.5">
-            {quickListItems.map((item) => {
+            {frequentItems.map((item) => {
               const onList = !item.removed_at && !item.is_checked
               return (
                 <li
                   key={item.id}
-                  className="flex items-center justify-between rounded-xl border border-border bg-surface px-3 py-2.5"
+                  className="flex items-center justify-between gap-2 rounded-xl border border-border bg-surface px-3 py-2.5"
                 >
-                  <span className="text-text-primary">
+                  <span className="min-w-0 flex-1 text-text-primary">
                     {item.name} <span className="text-xs text-text-muted">({item.checked_count}×)</span>
                   </span>
                   {onList ? (
-                    <span className="text-sm text-text-muted">✓ On list</span>
+                    <span className="shrink-0 text-sm text-text-muted">✓ On list</span>
                   ) : (
-                    <button onClick={() => quickAdd(item)} className="text-sm font-medium text-primary">
+                    <button
+                      onClick={() => addFromFrequentlyBought(item)}
+                      className="shrink-0 text-sm font-medium text-primary"
+                    >
                       + Add
                     </button>
                   )}
                 </li>
               )
             })}
-            {quickListItems.length === 0 && (
+            {frequentItems.length === 0 && (
               <p className="py-4 text-center text-text-secondary">No purchase history yet on this list.</p>
             )}
           </ul>
@@ -798,7 +824,7 @@ export default function ListDetail() {
       {confirmAction === 'reset' && (
         <ConfirmModal
           title="Reset all counts?"
-          message="This zeroes out the lifetime checked/unchecked tally for every item on this list. This cannot be undone."
+          message="This zeroes out the lifetime checked/unchecked tally for every item on this list, and empties Frequently Bought with it. This cannot be undone."
           confirmLabel="Reset counts"
           danger
           onConfirm={handleResetCounts}
