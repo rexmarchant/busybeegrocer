@@ -302,6 +302,12 @@ export default function ListDetail() {
     setCollapsedSections((prev) => (prev.size > 0 ? new Set() : new Set(getAllSectionKeys(blocks))))
   }
 
+  function clearFilters() {
+    setFavoritesOnly(false)
+    setShowNotes(false)
+    setStoreFilterIds(null)
+  }
+
   function toggleStoreFilter(key: string) {
     setStoreFilterIds((prev) => {
       const allKeys = storeFilterOptions.map((o) => o.key)
@@ -720,9 +726,7 @@ export default function ListDetail() {
                   {activeFilterCount > 0 && (
                     <MenuItem
                       onClick={() => {
-                        setFavoritesOnly(false)
-                        setShowNotes(false)
-                        setStoreFilterIds(null)
+                        clearFilters()
                         close()
                       }}
                     >
@@ -813,8 +817,27 @@ export default function ListDetail() {
                 />
               )
             })}
+            {/* Three different reasons for an empty list, and telling them apart
+                matters: "No items yet" in front of a list that is merely
+                filtered sends you off to re-add things you already own. Ask in
+                the order the items were narrowed — the list itself, then the
+                filters, then the search — so the message names the outermost
+                cause rather than the last one applied. */}
             {blocks.length === 0 && (
-              <p className="py-8 text-center text-text-secondary">No items yet — add your first one above.</p>
+              <li className="py-8 text-center text-text-secondary">
+                {allViewItems.length === 0 ? (
+                  <p>No items yet — add your first one above.</p>
+                ) : viewItems.length === 0 ? (
+                  <>
+                    <p>Nothing matches the filters you've set.</p>
+                    <button onClick={clearFilters} className="mt-2 text-sm text-primary underline">
+                      Clear filters
+                    </button>
+                  </>
+                ) : (
+                  <p>No items match "{searchQuery.trim()}".</p>
+                )}
+              </li>
             )}
           </ul>
         )}
