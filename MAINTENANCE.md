@@ -193,6 +193,9 @@ It no-ops when an item already holds the requested value (migration `20260806175
 **9. The Frequently Bought half-life is written in two places.**
 90 days, in migration `20260815125948` and in `app/src/lib/frequentlyBought.ts`. Postgres can't share a constant with the browser, so it is duplicated. Change one without the other and the stored score and the displayed score stop measuring the same thing. There's a test for the half-life, but nothing can check the two match — only reading both.
 
+**10. `check_all_list_items` is still in the database with no caller.**
+The "Check all" menu entry was removed from the app; the function was deliberately left in place. It matters here because it holds its *own* copy of the purchase-score arithmetic from trap 9 — so a future change to the scoring has three sites, not two, and the third one runs for nobody. Either update it alongside the others or drop it, but don't leave it half-changed and looking authoritative. It is not security definer, so RLS confines it to the caller's own lists; leaving it exposed is untidy, not unsafe.
+
 ---
 
 ## 7. Tests

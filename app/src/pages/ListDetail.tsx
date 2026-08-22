@@ -113,7 +113,6 @@ export default function ListDetail() {
   const [showAddItem, setShowAddItem] = useState(false)
   const [infoItemId, setInfoItemId] = useState<string | null>(null)
   const [removeConfirmItem, setRemoveConfirmItem] = useState<ViewItem | null>(null)
-  const [confirmCheckAll, setConfirmCheckAll] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [showIconPicker, setShowIconPicker] = useState(false)
@@ -395,13 +394,6 @@ export default function ListDetail() {
     loadAll()
   }
 
-  async function handleCheckAll() {
-    if (!listId) return
-    await supabase.rpc('check_all_list_items', { p_list_id: listId })
-    setConfirmCheckAll(false)
-    loadAll()
-  }
-
   if (!list) {
     return <div className="p-6 text-text-secondary">Loading…</div>
   }
@@ -653,35 +645,23 @@ export default function ListDetail() {
             )}
           </Menu>
 
-          <Menu
-            ariaLabel="More actions"
-            align="right"
-            className="w-11 shrink-0"
-            label={<span className="text-lg leading-none">☰</span>}
-          >
-            {(close) => (
-              <>
-                <MenuItem
-                  onClick={() => {
-                    close()
-                    setConfirmCheckAll(true)
-                  }}
-                >
-                  ✓ Check all
-                </MenuItem>
-                {blocks.some((b) => b.type === 'header') && (
-                  <MenuItem
-                    onClick={() => {
-                      close()
-                      toggleCollapseAll()
-                    }}
-                  >
-                    {collapsedSections.size > 0 ? 'Expand all' : 'Collapse all'}
-                  </MenuItem>
-                )}
-              </>
-            )}
-          </Menu>
+          {/* Collapsing every section was the only thing left in the old ☰
+              menu, so it is the button now — one tap instead of two, and no
+              menu to open to find out what is in it. Kept to the same narrow
+              width the menu trigger had so the two dropdowns beside it keep
+              their room. */}
+          {blocks.some((b) => b.type === 'header') && (
+            <button
+              onClick={toggleCollapseAll}
+              aria-label={collapsedSections.size > 0 ? 'Expand all sections' : 'Collapse all sections'}
+              className="flex w-11 shrink-0 items-center justify-center rounded-xl border border-border py-2.5 text-text-secondary"
+            >
+              <Chevron
+                direction={collapsedSections.size > 0 ? 'down' : 'up'}
+                className="h-5 w-5"
+              />
+            </button>
+          )}
         </div>
 
         {/* Say plainly that this is a saved copy. A list that silently might be
@@ -857,17 +837,6 @@ export default function ListDetail() {
           danger
           onConfirm={confirmRemove}
           onCancel={() => setRemoveConfirmItem(null)}
-        />
-      )}
-
-      {confirmCheckAll && (
-        <ConfirmModal
-          title="Check all items?"
-          message={`This marks all ${uncheckedCount} unchecked item${uncheckedCount === 1 ? '' : 's'} on this list as checked.`}
-          confirmLabel="Check all"
-          danger
-          onConfirm={handleCheckAll}
-          onCancel={() => setConfirmCheckAll(false)}
         />
       )}
     </div>
