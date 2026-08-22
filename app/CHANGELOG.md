@@ -1,3 +1,10 @@
+# [2.8.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.7.0...v2.8.0) (2026-08-22)
+
+
+### Features
+
+* swap the list menu for a collapse/expand all button and drop Check all ([a369f4b](https://github.com/rexmarchant/busybeegrocer/commit/a369f4b98e9f03a9576ae67801ee400cd68095c6))
+
 # [2.7.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.6.0...v2.7.0) (2026-08-15)
 
 
