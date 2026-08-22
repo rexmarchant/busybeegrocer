@@ -1,3 +1,15 @@
+# [2.9.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.8.0...v2.9.0) (2026-08-22)
+
+
+### Bug Fixes
+
+* an empty list now says whether it's filtered, searched or really empty ([2dd2165](https://github.com/rexmarchant/busybeegrocer/commit/2dd2165769b3b00aa339afe872c93eb6caf35830))
+
+
+### Features
+
+* Filter now closes when you pick something and shows how many are set, with the store filter inside it ([dd8afed](https://github.com/rexmarchant/busybeegrocer/commit/dd8afed6d415e4b2697595ed364dd04cb58fd157))
+
 # [2.8.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.7.0...v2.8.0) (2026-08-22)
 
 
