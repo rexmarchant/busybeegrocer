@@ -9,6 +9,7 @@ import { addItemToList, removeItemFromList } from '../lib/listActions'
 import { listColorHex, listIconEmoji } from '../lib/constants'
 import {
   NO_STORE_FILTER_KEY,
+  NO_STORE_LABEL,
   SORT_LABELS,
   buildBlocks,
   filterByStore,
@@ -124,7 +125,10 @@ export default function ListDetail() {
   const [showShoppingPreview, setShowShoppingPreview] = useState(false)
   const [showNotes, setShowNotes] = usePersistedState<boolean>(uiKey('showNotes'), false)
   const [favoritesOnly, setFavoritesOnly] = usePersistedState<boolean>(uiKey('favoritesOnly'), false)
-  const [showStoreFilter, setShowStoreFilter] = usePersistedState<boolean>(uiKey('showStoreFilter'), false)
+  /** Which view the Filter menu is showing. The store picker used to be a pane
+   * that stayed open under the toolbar, remembered between visits; it is a step
+   * inside the menu now, so it starts at the top every time the menu opens. */
+  const [showStorePicker, setShowStorePicker] = useState(false)
   const [storeFilterIds, setStoreFilterIds] = usePersistedState<Set<string> | null>(
     listId ? storeFilterStorageKey(listId) : null,
     null,
@@ -270,8 +274,18 @@ export default function ListDetail() {
     return favoritesOnly ? byStore.filter((i) => i.is_favorite) : byStore
   }, [allViewItems, storeFilterIds, favoritesOnly])
 
-  /** What the Filter button counts. The store picker being *open* isn't a
-   * filter; having chosen stores in it is. */
+  /** Every store plus the bucket for items without a preferred one: the rows the
+   * picker offers, and the yardstick for "all ticked", which means no filter. */
+  const storeFilterOptions = useMemo(
+    () => [
+      ...stores.map((s) => ({ key: s.id, name: s.name })),
+      { key: NO_STORE_FILTER_KEY, name: NO_STORE_LABEL },
+    ],
+    [stores],
+  )
+
+  /** What the Filter button counts. Visiting the store picker isn't a filter;
+   * having chosen stores in it is. */
   const activeFilterCount =
     (favoritesOnly ? 1 : 0) + (showNotes ? 1 : 0) + (storeFilterIds ? 1 : 0)
 
@@ -290,7 +304,7 @@ export default function ListDetail() {
 
   function toggleStoreFilter(key: string) {
     setStoreFilterIds((prev) => {
-      const allKeys = [...stores.map((s) => s.id), NO_STORE_FILTER_KEY]
+      const allKeys = storeFilterOptions.map((o) => o.key)
       const base = prev ?? new Set(allKeys)
       const next = new Set(base)
       if (next.has(key)) next.delete(key)
@@ -600,10 +614,18 @@ export default function ListDetail() {
             )}
           </Menu>
 
+          {/* Filter now behaves exactly like Sort: pick one thing, the menu
+              closes, and the count on the button says how many are set. It
+              used to stay open after every tap and leave the store picker
+              stranded in a pane below — two different ways of dismissing one
+              control, which is what made it fiddly. Stores are a step inside
+              this menu instead, with Done as the way out. */}
           <Menu
             className="min-w-0 flex-1"
             align="right"
+            panelClassName="w-64"
             active={activeFilterCount > 0}
+            onClose={() => setShowStorePicker(false)}
             label={
               <>
                 <span className="min-w-0 truncate">
@@ -613,36 +635,103 @@ export default function ListDetail() {
               </>
             }
           >
-            {() => (
-              <>
-                {/* Left open on purpose: filters are usually set in twos and
-                    threes, and closing after each one means reopening. */}
-                <MenuItem selected={favoritesOnly} onClick={() => setFavoritesOnly((v) => !v)}>
-                  ★ Favorites
-                </MenuItem>
-                <MenuItem selected={showNotes} onClick={() => setShowNotes((v) => !v)}>
-                  📝 Notes
-                </MenuItem>
-                <MenuItem
-                  selected={!!storeFilterIds}
-                  onClick={() => setShowStoreFilter((v) => !v)}
-                >
-                  🏬 Store filter{storeFilterIds ? ` (${storeFilterIds.size})` : ''}
-                </MenuItem>
-                {activeFilterCount > 0 && (
+            {(close) =>
+              showStorePicker ? (
+                <>
+                  <div className="flex items-center gap-1 border-b border-border px-2 py-2">
+                    <button
+                      onClick={() => setShowStorePicker(false)}
+                      aria-label="Back to filters"
+                      className="shrink-0 rounded-lg p-1 text-text-secondary"
+                    >
+                      <Chevron direction="left" className="h-5 w-5" />
+                    </button>
+                    <span className="min-w-0 flex-1 truncate text-sm text-text-primary">
+                      🏬 Store filter
+                    </span>
+                  </div>
+
+                  {/* Checkboxes, not menu rows: several stores are usually on
+                      at once, so ticking one must not dismiss the picker. */}
+                  <div className="max-h-56 overflow-y-auto py-1">
+                    {storeFilterOptions.map((option) => (
+                      <label
+                        key={option.key}
+                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-text-primary"
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 shrink-0"
+                          checked={!storeFilterIds || storeFilterIds.has(option.key)}
+                          onChange={() => toggleStoreFilter(option.key)}
+                        />
+                        <span className="min-w-0 flex-1">{option.name}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2">
+                    {storeFilterIds ? (
+                      <button
+                        onClick={() => setStoreFilterIds(null)}
+                        className="text-sm text-primary underline"
+                      >
+                        Show all stores
+                      </button>
+                    ) : (
+                      <span className="text-xs text-text-secondary">All stores</span>
+                    )}
+                    <button
+                      onClick={close}
+                      className="shrink-0 rounded-lg bg-primary px-4 py-1.5 text-sm text-white"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
                   <MenuItem
+                    selected={favoritesOnly}
                     onClick={() => {
-                      setFavoritesOnly(false)
-                      setShowNotes(false)
-                      setStoreFilterIds(null)
-                      setShowStoreFilter(false)
+                      setFavoritesOnly((v) => !v)
+                      close()
                     }}
                   >
-                    Clear filters
+                    ★ Favorites
                   </MenuItem>
-                )}
-              </>
-            )}
+                  <MenuItem
+                    selected={showNotes}
+                    onClick={() => {
+                      setShowNotes((v) => !v)
+                      close()
+                    }}
+                  >
+                    📝 Notes
+                  </MenuItem>
+                  {/* The one row that drills in rather than closing. */}
+                  <MenuItem
+                    selected={!!storeFilterIds}
+                    onClick={() => setShowStorePicker(true)}
+                    trailing={<Chevron direction="right" className="h-4 w-4 shrink-0" />}
+                  >
+                    🏬 Store filter{storeFilterIds ? ` (${storeFilterIds.size})` : ''}
+                  </MenuItem>
+                  {activeFilterCount > 0 && (
+                    <MenuItem
+                      onClick={() => {
+                        setFavoritesOnly(false)
+                        setShowNotes(false)
+                        setStoreFilterIds(null)
+                        close()
+                      }}
+                    >
+                      Clear filters
+                    </MenuItem>
+                  )}
+                </>
+              )
+            }
           </Menu>
 
           {/* Collapsing every section was the only thing left in the old ☰
@@ -679,34 +768,6 @@ export default function ListDetail() {
             ⏳ {pendingCount} change{pendingCount === 1 ? '' : 's'} saved on this phone — they'll sync
             when you're back online.
           </p>
-        )}
-
-        {showStoreFilter && (
-          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-3">
-            {stores.map((s) => (
-              <label key={s.id} className="flex items-center gap-1.5 text-sm text-text-secondary">
-                <input
-                  type="checkbox"
-                  checked={!storeFilterIds || storeFilterIds.has(s.id)}
-                  onChange={() => toggleStoreFilter(s.id)}
-                />
-                {s.name}
-              </label>
-            ))}
-            <label className="flex items-center gap-1.5 text-sm text-text-secondary">
-              <input
-                type="checkbox"
-                checked={!storeFilterIds || storeFilterIds.has(NO_STORE_FILTER_KEY)}
-                onChange={() => toggleStoreFilter(NO_STORE_FILTER_KEY)}
-              />
-              No Preferred Store
-            </label>
-            {storeFilterIds && (
-              <button onClick={() => setStoreFilterIds(null)} className="text-sm text-primary underline">
-                Show all stores
-              </button>
-            )}
-          </div>
         )}
 
         {showNotes ? (
