@@ -16,6 +16,7 @@ things that will silently break if you forget them.
 | **Local working folder** | `C:\Users\rexma\ClaudeOS\Shopping-List` |
 | **GitHub repo** | `github.com/rexmarchant/busybeegrocer` — **public** |
 | **Claude memory** (auto-loaded) | `C:\Users\rexma\.claude\projects\C--Users-rexma-ClaudeOS-Shopping-List\memory\` |
+| **State of play** (read at session start) | `C:\Users\rexma\.claude\plans\busybeegrocer-next-session.md` — see section 9 |
 
 ### Documentation files, and what each is for
 
@@ -196,6 +197,9 @@ It no-ops when an item already holds the requested value (migration `20260806175
 **10. `check_all_list_items` is still in the database with no caller.**
 The "Check all" menu entry was removed from the app; the function was deliberately left in place. It matters here because it holds its *own* copy of the purchase-score arithmetic from trap 9 — so a future change to the scoring has three sites, not two, and the third one runs for nobody. Either update it alongside the others or drop it, but don't leave it half-changed and looking authoritative. It is not security definer, so RLS confines it to the caller's own lists; leaving it exposed is untidy, not unsafe.
 
+**11. There is a stale mirror of this repo at `C:\Users\rexma\ClaudeOS-Backup\Shopping-List`.**
+A session once ran entirely in it by mistake — every edit landed in a copy nothing deploys from, and a small change became a long detour. The working folder is the one in section 1. Check `pwd` before the first edit, not after the first confusing result.
+
 ---
 
 ## 7. Tests
@@ -243,11 +247,29 @@ cd C:\Users\rexma\ClaudeOS\Shopping-List
 claude
 ```
 
-Then say what you want, and point it at this file:
+Then either describe the change straight away:
 
 > Read MAINTENANCE.md first. I want to <describe the change>.
 
-That one line is enough. It gets the layout, the deploy pipeline and the traps from this document, and the history from memory.
+Or, if you would rather have the environment checked before you explain anything:
+
+> Read MAINTENANCE.md and prepare for the next change.
+
+Both get the layout, the deploy pipeline and the traps from this document, and the history from memory. The second also runs the checklist below and reports back before touching anything.
+
+### Preparing for a change
+
+**Claude: on "prepare for the next change", do this first, then stop and wait for the change to be described.**
+
+1. **Read the state-of-play file** — `C:\Users\rexma\.claude\plans\busybeegrocer-next-session.md`. It carries what a fresh session cannot work out for itself: anything left half-finished, and a dated snapshot of the environment. **If the snapshot is more than a week old, treat it as history and verify from scratch — steps 2-5 are authoritative either way.** If the file is missing, carry on without it and offer to create it at the end.
+2. **Confirm the folder.** `pwd` must show `ClaudeOS/Shopping-List` with no `-Backup`. This is trap 11, and it has already cost a session.
+3. **`git pull --rebase origin main`**, then confirm the tree is clean. CI pushes its own release commit, so local `main` is usually behind — trap 3.
+4. **Check `app/node_modules` exists**, and run `npm install` in `app/` if it does not.
+5. **Check ports 5173 and 8788 are free**, so a stale dev server is not about to serve the wrong build.
+
+Then report the folder, the version, the branch state and anything in flight — and wait. Do not start a dev server or edit anything until there is a change to make.
+
+At the end of the session, update the state-of-play file: what shipped, what is in flight, and a fresh dated snapshot. That is what makes the next "prepare" worth running.
 
 **Worth saying explicitly, because it changes what Claude does:**
 
