@@ -4,7 +4,7 @@ import { ArrowLeft } from './Icons'
 // Served straight out of app/public/video/ — BASE_URL covers the /busybeegrocer/
 // subpath in the Pages build. The source recording lives in assets/video/ and is
 // far too large to ship as-is; this is the web-encoded copy.
-const TUTORIAL_VIDEO_SRC = `${import.meta.env.BASE_URL}video/tutorial.mp4`
+const TUTORIAL_VIDEO_SRC = `${import.meta.env.BASE_URL}video/tutorial-v2.mp4`
 
 /** Full-screen tutorial player. Sits above the settings modal (z-40 vs z-30) so
  * backing out of it lands you right back where you opened it from. */
