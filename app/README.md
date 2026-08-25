@@ -6,9 +6,9 @@ keeps working when you're standing in a shop with no signal.
 **Live app:** https://rexmarchant.github.io/busybeegrocer/
 
 <p>
-  <img src="public/screenshots/shot-1.webp" width="240" alt="A list grouped by store and aisle">
-  <img src="public/screenshots/shot-2.webp" width="240" alt="Shopping mode showing only what is still needed">
-  <img src="public/screenshots/shot-3.webp" width="240" alt="The end of a shopping trip">
+  <img src="public/screenshots/shot-1-v2.webp" width="240" alt="A list grouped by store and aisle">
+  <img src="public/screenshots/shot-2-v2.webp" width="240" alt="Shopping mode showing only what is still needed">
+  <img src="public/screenshots/shot-3-v2.webp" width="240" alt="The end of a shopping trip">
 </p>
 
 ## What it does

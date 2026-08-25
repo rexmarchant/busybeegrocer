@@ -102,6 +102,18 @@
         border: 1px solid var(--border); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
       }
 
+      /* ---------- tour ---------- */
+      /* Portrait, unlike the reel at the top -- this one is a phone recording.
+         Sized by height so it cannot swamp a wide screen, and the aspect-ratio
+         reserves the right shape before the poster loads. */
+      .tour video {
+        display: block; margin: 0 auto;
+        max-height: min(72vh, 34rem); max-width: 100%;
+        width: auto; height: auto; aspect-ratio: 650 / 1280;
+        background: #000; border-radius: 1rem; border: 1px solid var(--border);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      }
+
       /* ---------- install ---------- */
       .install { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
       .steps { display: grid; gap: 1.5rem; grid-template-columns: 1fr; }
@@ -211,10 +223,32 @@
           you've picked up moved quietly out of the way.
         </p>
         <div class="shots">
-          <img src="/app/screenshots/shot-1.webp" alt="A list grouped by store and aisle" />
-          <img src="/app/screenshots/shot-2.webp" alt="Shopping mode showing only what is still needed" />
-          <img src="/app/screenshots/shot-3.webp" alt="The end of a shopping trip" />
+          <img src="/app/screenshots/shot-1-v2.webp" alt="A list grouped by store and aisle" />
+          <img src="/app/screenshots/shot-2-v2.webp" alt="Shopping mode showing only what is still needed" />
+          <img src="/app/screenshots/shot-3-v2.webp" alt="The end of a shopping trip" />
         </div>
+      </div>
+    </section>
+
+    <section class="tour">
+      <div class="wrap">
+        <h2>See the whole thing before you sign in</h2>
+        <p class="lede">
+          A minute and a half through the app as it's actually used — building a list, putting it
+          in aisle order, and taking it round the shop. No account needed to watch.
+        </p>
+        <!-- Deliberately not autoplaying: it runs a minute and a half with narration, and the
+             reel at the top of the page is already moving. preload="none" keeps the 3.7MB off
+             everyone who never presses play, and the poster stands in until they do. -->
+        <video
+          src="/app/video/tutorial-v2.mp4"
+          poster="/app/video/tutorial-poster.webp"
+          width="650"
+          height="1280"
+          controls
+          playsinline
+          preload="none"
+        ></video>
       </div>
     </section>
 

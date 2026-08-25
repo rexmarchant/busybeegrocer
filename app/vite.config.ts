@@ -69,21 +69,21 @@ export default defineConfig(({ command }) => {
           // the short side, or Chrome ignores the lot.
           screenshots: [
             {
-              src: `${base}screenshots/shot-1.webp`,
+              src: `${base}screenshots/shot-1-v2.webp`,
               sizes: '720x1406',
               type: 'image/webp',
               form_factor: 'narrow',
               label: 'Your list, grouped by store and aisle',
             },
             {
-              src: `${base}screenshots/shot-2.webp`,
+              src: `${base}screenshots/shot-2-v2.webp`,
               sizes: '720x1406',
               type: 'image/webp',
               form_factor: 'narrow',
               label: 'Shopping mode, showing only what is still needed',
             },
             {
-              src: `${base}screenshots/shot-3.webp`,
+              src: `${base}screenshots/shot-3-v2.webp`,
               sizes: '720x1406',
               type: 'image/webp',
               form_factor: 'narrow',
