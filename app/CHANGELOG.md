@@ -1,3 +1,15 @@
+# [2.10.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.9.0...v2.10.0) (2026-08-25)
+
+
+### Bug Fixes
+
+* replace the tutorial video with a shorter, sharper recording ([c0d0dff](https://github.com/rexmarchant/busybeegrocer/commit/c0d0dff63601750f9c4e9c74c8efd66826876426))
+
+
+### Features
+
+* watch the full tutorial on the website without signing in ([2f2a253](https://github.com/rexmarchant/busybeegrocer/commit/2f2a253725bdc9c0abdd24cf1dff8adf965f62cb))
+
 # [2.9.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.8.0...v2.9.0) (2026-08-22)
 
 
