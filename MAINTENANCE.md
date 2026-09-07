@@ -50,6 +50,8 @@ The landing page occupies `/`, the app lives under `/app/`. In the built output:
 ```
 dist/
   index.html          landing page          (from site/)
+  story.html          /story heritage page  (from site/)
+  heritage/           its newspaper scans   (from site/)
   404.html            real 404 page         (from site/)
   _redirects          routing rules         (from site/)
   _headers            cache rules           (from site/)
@@ -57,6 +59,12 @@ dist/
   app/                the built app
     404.html          copy of index.html — fallback for unlisted routes
 ```
+
+`story.html` is served at `/story` — Cloudflare Pages strips `.html` by itself, so
+this needs no rule in `_redirects` (and must not get one: that file is generated).
+It and the landing page are two standalone files that each carry their own copy of
+the colour tokens, because `site/` has no build step. Change a colour in one and
+change it in the other.
 
 Nothing in the app hardcodes `/app`. Every path comes from `import.meta.env.BASE_URL`, set by `base` in `app/vite.config.ts`. Changing that one line moves the whole app — router, assets, manifest, magic-link redirect and the share QR all follow.
 

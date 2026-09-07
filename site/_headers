@@ -29,3 +29,14 @@
 # links would keep booting an old bundle after a deploy.
 /app/404.html
   Cache-Control: public, max-age=0, must-revalidate
+
+/story
+  Cache-Control: public, max-age=0, must-revalidate
+/story.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+# The newspaper scans and the storefront photograph on /story and the home page.
+# Not content-hashed, so a week rather than a year -- long enough to be free on a
+# revisit, short enough that replacing a scan reaches people.
+/heritage/*
+  Cache-Control: public, max-age=604800

@@ -131,6 +131,38 @@
       .note p { margin: 0 0 0.75rem; color: var(--ink-2); }
       .note p:last-child { margin-bottom: 0; }
 
+      /* ---------- heritage teaser ---------- */
+      /* auto-fit rather than a breakpoint, so it folds to one column by itself. */
+      .heritage { padding: clamp(3rem, 8vw, 6rem) 0; }
+      .heritage .cols {
+        display: grid; gap: clamp(2rem, 5vw, 3.5rem); align-items: center;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+      }
+      .heritage .kicker {
+        font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.13em;
+        text-transform: uppercase; color: var(--brand); margin: 0 0 1.125rem;
+      }
+      /* Deliberately larger and heavier than the other section headings: this is
+         the one section on the page that sends people somewhere else. */
+      .heritage h2 {
+        font-size: clamp(1.875rem, 4.4vw, 3rem); font-weight: 800; line-height: 1.08;
+        margin: 0 0 1.25rem; max-width: 20ch;
+      }
+      .heritage p { color: var(--ink-2); font-size: 1.125rem; max-width: 52ch; margin: 0 0 1rem; }
+      .heritage .read {
+        display: inline-block; margin-top: 0.75rem; background: var(--brand); color: #fff;
+        font-weight: 600; text-decoration: none; padding: 0.875rem 1.75rem;
+        border-radius: 999px; white-space: nowrap;
+      }
+      .heritage .read:hover { background: var(--brand-dark); }
+      .heritage .frame {
+        display: block; padding: 0.625rem; background: var(--surface);
+        border: 1px solid var(--border); border-radius: 1rem; text-decoration: none;
+      }
+      .heritage .frame:hover { box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14); }
+      .heritage .frame img { width: 100%; display: block; border-radius: 0.625rem; }
+      .heritage figcaption { font-size: 0.8125rem; margin-top: 0.625rem; color: var(--ink-2); }
+
       footer {
         padding: 2.5rem 0 3.5rem; color: var(--ink-3);
         font-size: 0.9rem; text-align: center;
@@ -317,10 +349,45 @@
       </div>
     </section>
 
+    <section class="heritage">
+      <div class="wrap cols">
+        <div>
+          <p class="kicker">Carrollton, Texas · 1970</p>
+          <h2>There was a real Busy Bee</h2>
+          <p>
+            A grocery store on South Broadway with five butchers and a butcherette, Green Stamps
+            double on Wednesday, and a Trailways bus stop by the register. My grandfather was its
+            original owner. My father managed it, then bought it with my uncle.
+          </p>
+          <p>
+            “We try to please the customer as much as possible.” That's what he told the newspaper,
+            and it's still the brief.
+          </p>
+          <a class="read" href="/story">Read the story</a>
+        </div>
+        <figure style="margin: 0">
+          <a class="frame" href="/story">
+            <img
+              src="/heritage/busy-bee-storefront-1970.webp"
+              width="691"
+              height="524"
+              loading="lazy"
+              alt="The Busy Bee Super Mkt. storefront on South Broadway, Carrollton, 1970"
+            />
+          </a>
+          <figcaption>
+            Busy Bee Thrif-Tee Food Store, 1014 South Broadway — from the March 19, 1970 Progress
+            Edition.
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
     <footer>
       <div class="wrap">
         <p>
           <a href="/app/">Open the app</a> ·
+          <a href="/story">Our story</a> ·
           <a href="/app/privacy">Privacy</a>
         </p>
         <p>Made for one household, shared with anyone who wants it.</p>

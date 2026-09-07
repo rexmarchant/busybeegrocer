@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>The store this app is named for — Busy Bee Grocer</title>
+    <meta
+      name="description"
+      content="The Busy Bee was a grocery store on South Broadway in Carrollton, Texas. My grandfather owned it and my father managed it. This app is named after it."
+    />
+    <meta name="theme-color" content="#2a78d6" />
+    <link rel="icon" type="image/png" href="/app/icons/icon-192.png" />
+
+    <meta property="og:title" content="The store this app is named for" />
+    <meta
+      property="og:description"
+      content="Carrollton, Texas, 1970: six butchers, a Trailways bus stop by the register, and the family that ran it."
+    />
+    <meta property="og:image" content="/heritage/busy-bee-storefront-1970.webp" />
+    <meta property="og:type" content="article" />
+
+    <style>
+      :root {
+        /* Shared with the landing page. Kept in step by hand -- there is no
+           build step for site/, so these two files each carry their own copy. */
+        --page: #e7e5df;
+        --surface: #ffffff;
+        --border: #cfccc3;
+        --ink: #0b0b0b;
+        --ink-2: #52514e;
+        --ink-3: #898781;
+        --brand: #2a78d6;
+        --brand-dark: #1c5cab;
+
+        /* Story page only. */
+        --tint: #eef4fc; /* fact tiles, on white */
+        --panel: #1b1c1e; /* pull-quote panel */
+        --panel-kicker: #9fc3ee;
+        --panel-ink-2: #c9cdd3;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      /* body sets 1.6 for prose; headings would inherit it and open up badly. */
+      h1, h2, h3 { letter-spacing: -0.02em; line-height: 1.15; }
+      a { color: var(--brand-dark); }
+
+      /* Every grid below uses auto-fit + minmax rather than a breakpoint, so the
+         page reflows to one column on its own and there are no media queries to
+         keep in step. */
+      .wrap { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+      section { padding: clamp(48px, 7vw, 88px) 0; }
+      .on-white { background: var(--surface); }
+      .kicker {
+        font-size: 12px; font-weight: 700; letter-spacing: 0.12em;
+        text-transform: uppercase; color: var(--brand); margin: 0 0 12px;
+      }
+      h2.section { font-size: clamp(28px, 4vw, 42px); font-weight: 800; margin: 0 0 32px; }
+
+      /* ---------- nav ---------- */
+      .nav {
+        display: flex; align-items: center; justify-content: space-between; gap: 16px;
+        padding: 18px 24px; background: var(--surface); border-bottom: 1px solid var(--border);
+      }
+      .nav .home { font-size: 19px; font-weight: 700; text-decoration: none; color: var(--ink); }
+      .pill {
+        display: inline-block; text-decoration: none; white-space: nowrap;
+        border-radius: 999px; font-weight: 600;
+      }
+      .pill.blue {
+        background: var(--brand); color: #fff; font-size: 15px; padding: 11px 22px;
+      }
+      .pill.blue:hover { background: var(--brand-dark); }
+
+      /* ---------- hero ---------- */
+      /* The same gradient the landing page's hero uses, so the two read as one site. */
+      .hero {
+        background: linear-gradient(165deg, #2a78d6 0%, #1c5cab 100%);
+        color: #fff;
+        padding: clamp(56px, 9vw, 112px) 0;
+      }
+      /* Pure white, not a tinted blue-white: anything softer drops body copy on
+         this band below 4.5:1. */
+      .hero p { color: #fff; }
+      .hero .kicker { font-size: 13px; font-weight: 600; letter-spacing: 0.14em; color: #fff; margin: 0 0 22px; }
+      .hero h1 {
+        font-size: clamp(40px, 7vw, 76px); font-weight: 800; line-height: 1.04;
+        margin: 0 0 28px; max-width: 20ch;
+      }
+      .hero p.lede {
+        font-size: clamp(18px, 2.2vw, 22px); line-height: 1.55; max-width: 60ch;
+        margin: 0 0 16px; text-wrap: pretty;
+      }
+      .hero p.lede:last-child { margin-bottom: 0; }
+
+      /* ---------- cards ---------- */
+      .grid { display: grid; }
+      .people { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 24px; }
+      .card {
+        background: var(--surface); border-radius: 16px; padding: 32px;
+        box-shadow: 0 1px 3px rgba(20, 22, 26, 0.1);
+      }
+      .card h2 { font-size: 30px; font-weight: 700; margin: 0 0 16px; }
+      .card p { margin: 0 0 12px; font-size: 17px; line-height: 1.6; color: var(--ink-2); }
+      .card p:last-child { margin-bottom: 0; }
+
+      /* ---------- clipping sections ---------- */
+      .headline-row {
+        display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 20px; margin-bottom: 32px;
+      }
+      .headline-row h2 { margin: 0; }
+      .dateline {
+        margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.1em;
+        text-transform: uppercase; color: var(--ink-2);
+      }
+      .clipping { grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 40px; align-items: start; }
+      figure { margin: 0; }
+      .zoom {
+        display: block; width: 100%; padding: 10px; background: var(--surface);
+        border: 1px solid var(--border); border-radius: 16px; cursor: zoom-in;
+      }
+      .zoom:hover { box-shadow: 0 6px 20px rgba(20, 22, 26, 0.14); }
+      .zoom img { width: 100%; display: block; border-radius: 10px; }
+      figcaption { font-size: 13px; margin-top: 10px; color: var(--ink-2); }
+      .body-copy { font-size: 18px; line-height: 1.65; margin: 0 0 20px; color: var(--ink-2); }
+      .body-copy:last-child { margin-bottom: 0; }
+
+      .facts { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-top: 28px; }
+      .fact { background: var(--tint); border-radius: 14px; padding: 18px; }
+      .fact .n { font-size: 30px; font-weight: 800; margin: 0 0 4px; color: var(--brand-dark); }
+      .fact p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--ink-2); }
+
+      /* ---------- pull quote ---------- */
+      .quote {
+        background: var(--panel); color: #fff; border-radius: 20px;
+        padding: clamp(32px, 5vw, 64px);
+      }
+      .quote .kicker { color: var(--panel-kicker); margin-bottom: 24px; }
+      .quote blockquote {
+        margin: 0; font-size: clamp(24px, 3.4vw, 40px); font-weight: 700;
+        line-height: 1.24; max-width: 32ch; letter-spacing: -0.02em;
+      }
+      .quote .attribution { margin: 28px 0 0; font-size: 16px; color: var(--panel-ink-2); }
+
+      /* ---------- timeline ---------- */
+      .timeline > div {
+        display: grid; grid-template-columns: 120px 1fr; gap: 24px;
+        padding: 20px 0; border-top: 1px solid var(--border);
+      }
+      .timeline > div:last-child { border-bottom: 1px solid var(--border); }
+      .timeline .year { margin: 0; font-size: 20px; font-weight: 700; color: var(--brand); }
+      .timeline p:not(.year) { margin: 0; font-size: 17px; line-height: 1.6; color: var(--ink-2); }
+
+      /* ---------- first job ---------- */
+      .split { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 40px; align-items: start; }
+      .aside { background: var(--page); border-radius: 16px; padding: 32px; }
+      .aside h3 { font-size: 23px; font-weight: 700; margin: 0 0 14px; }
+      .aside p { margin: 0 0 12px; font-size: 17px; line-height: 1.6; color: var(--ink-2); }
+      .aside p:last-child { margin-bottom: 0; }
+
+      /* ---------- what the store put in the app ---------- */
+      .lede { font-size: 19px; line-height: 1.6; max-width: 62ch; margin: 0 0 40px; color: var(--ink-2); }
+      .values { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 20px; }
+      .values .card { padding: 28px; }
+      .values h3 { font-size: 20px; font-weight: 700; margin: 0 0 10px; }
+      .values p { margin: 0; font-size: 16px; line-height: 1.6; color: var(--ink-2); }
+
+      /* ---------- closing CTA ---------- */
+      .cta-band {
+        background: linear-gradient(165deg, #2a78d6 0%, #1c5cab 100%);
+        color: #fff; padding: clamp(48px, 7vw, 88px) 0;
+      }
+      .cta-band h2 {
+        font-size: clamp(26px, 3.6vw, 38px); font-weight: 800; margin: 0 0 20px; max-width: 26ch;
+      }
+      .cta-band p { font-size: 17px; line-height: 1.6; max-width: 56ch; margin: 0 0 32px; color: #fff; }
+      .cta-band .pills { display: flex; flex-wrap: wrap; gap: 12px; }
+      .pill.white {
+        background: #fff; color: var(--brand-dark); font-weight: 700; font-size: 16px; padding: 15px 30px;
+      }
+      .pill.white:hover { background: #eaf2fd; }
+      .pill.ghost {
+        background: transparent; color: #fff; font-size: 16px; padding: 15px 30px;
+        border: 1px solid rgba(255, 255, 255, 0.55);
+      }
+      .pill.ghost:hover { background: rgba(255, 255, 255, 0.12); }
+
+      footer {
+        padding: 2.5rem 0 3.5rem; color: var(--ink-3);
+        font-size: 0.9rem; text-align: center;
+      }
+      footer a { color: var(--ink-2); }
+
+      /* ---------- lightbox ---------- */
+      /* A real <dialog>: showModal() gives Escape-to-close, a focus trap and
+         focus returned to the button that opened it, none of which a plain
+         overlay div does for free. */
+      #lightbox {
+        border: 0; padding: 24px; margin: 0; background: transparent;
+        width: 100%; max-width: 100%; height: 100%; max-height: 100%;
+        overflow: auto; cursor: zoom-out;
+      }
+      #lightbox::backdrop { background: rgba(16, 18, 20, 0.9); }
+      #lightbox img {
+        margin: 0 auto; display: block; border-radius: 10px; background: #fff;
+        width: min(var(--zoom-width, 1100px), 100%); cursor: default;
+      }
+      #lightbox .close {
+        position: fixed; top: 20px; right: 20px; background: #fff; color: var(--ink);
+        border: 0; font: inherit; font-weight: 600; font-size: 15px;
+        padding: 12px 22px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+      }
+    </style>
+  </head>
+
+  <body>
+    <nav class="nav">
+      <a class="home" href="/">Busy Bee Grocer</a>
+      <a class="pill blue" href="/app/">Open the app</a>
+    </nav>
+
+    <header class="hero">
+      <div class="wrap">
+        <p class="kicker">Carrollton, Texas</p>
+        <h1>The store this app is named for</h1>
+        <p class="lede">
+          My grandfather was the original owner of the Busy Bee. My father managed it, and later
+          bought it with my uncle as co-owners. Between them they spent most of their working lives
+          making sure that when a family in Carrollton came through the door, somebody knew what
+          they were after.
+        </p>
+        <p class="lede">
+          Two newspaper clippings are most of what I have left of it. This page is for them.
+        </p>
+      </div>
+    </header>
+
+    <section>
+      <div class="wrap grid people">
+        <div class="card">
+          <p class="kicker">My grandfather</p>
+          <h2>R. L. Davenport</h2>
+          <p>
+            The original owner, and a veteran market man. Reared in Dallas County, he had been
+            running markets and groceries since 1950 — three stores in Oak Cliff, which he sold when
+            he came to Carrollton in 1962 to buy into the local business.
+          </p>
+          <p>
+            He was still behind the block in 1970, cutting meat to fit the customer. One of six
+            butchers in his own store, because that was the job.
+          </p>
+        </div>
+        <div class="card">
+          <p class="kicker">My father</p>
+          <h2>Vernon F. “Buddy” Marchant, Jr.</h2>
+          <p>
+            Co-manager, and later co-owner. A Dallas native out of South Oak Cliff High School, he
+            started as a clerk and stockboy at Davenport Grocery in Oak Cliff — the name over that
+            door belonged to the man whose daughter he would marry.
+          </p>
+          <p>
+            He stayed with the store through two and a half years of business school at Arlington
+            State, went to Affiliated Foods in Dallas, served eleven months with the 49th Division
+            of the Texas National Guard at Fort Polk, and came back to groceries for good.
+          </p>
+          <p>
+            Managing the Busy Bee was not where it ended: in time he and my uncle bought the store
+            from my grandfather and ran it as co-owners.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="on-white">
+      <div class="wrap">
+        <div class="headline-row">
+          <h2 class="section">“Busy Bee, Progressive Market”</h2>
+          <p class="dateline">Progress Edition · Thursday, March 19, 1970</p>
+        </div>
+        <div class="grid clipping">
+          <figure>
+            <button
+              class="zoom"
+              type="button"
+              data-zoom="/heritage/clipping-progressive-market-1970.webp"
+              data-zoom-alt="Enlarged newspaper page: Busy Bee, Progressive Market, March 19, 1970"
+              data-zoom-width="1100px"
+            >
+              <img
+                src="/heritage/clipping-progressive-market-1970.webp"
+                width="1024"
+                height="1536"
+                alt="Newspaper page: Busy Bee, Progressive Market, March 19, 1970"
+              />
+            </button>
+            <figcaption>Click to enlarge and read the fine print.</figcaption>
+          </figure>
+          <div>
+            <p class="body-copy">
+              Six thousand square feet on South Broadway, and the paper called it the largest meat
+              market of its kind in Dallas County. Five butchers and a butcherette worked the
+              service counter, cutting to order rather than to a tray.
+            </p>
+            <p class="body-copy">
+              “There are very few markets like this left,” my grandfather told the reporter in 1970.
+              He was right.
+            </p>
+            <div class="grid facts">
+              <div class="fact">
+                <p class="n">6</p>
+                <p>butchers, counting the owner</p>
+              </div>
+              <div class="fact">
+                <p class="n">6,000</p>
+                <p>square feet of floor</p>
+              </div>
+              <div class="fact">
+                <p class="n">2×</p>
+                <p>Green Stamps on Wednesday</p>
+              </div>
+              <div class="fact">
+                <p class="n">1</p>
+                <p>Trailways bus stop, inside the store</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <div class="quote">
+          <p class="kicker">In his own words</p>
+          <blockquote>
+            “There is something different happening every day. It gives one the chance to meet the
+            public. There is always the goal of trying to serve the people better.”
+          </blockquote>
+          <p class="attribution">Buddy Marchant, asked why he stayed in the grocery business</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="on-white">
+      <div class="wrap">
+        <h2 class="section">“Meet Buddy Marchant”</h2>
+        <div class="grid clipping">
+          <div>
+            <p class="body-copy">
+              The local paper ran a profile of him: twenty-nine years old, about ten years in the
+              grocery business, and freshly in charge in Carrollton. In January of 1964 he was made
+              manager of the Busy Bee on Lake June Road; a year later they moved him to Carrollton.
+            </p>
+            <p class="body-copy">
+              What he liked about the work, he said, was that it left <em>some time for home-life</em>
+              — a wife of five years, a two-year-old son, and a yard he called his hobby. What he
+              wanted was to grow with the company and make supervisor when the chain expanded.
+            </p>
+            <p class="body-copy">
+              And he liked Carrollton: “People here in Carrollton are friendlier than those anywhere
+              else I've worked… I think the store will grow with Carrollton as Carrollton grows.”
+            </p>
+          </div>
+          <figure>
+            <button
+              class="zoom"
+              type="button"
+              data-zoom="/heritage/clipping-meet-buddy-marchant.webp"
+              data-zoom-alt="Enlarged newspaper profile: Meet Buddy Marchant"
+              data-zoom-width="760px"
+            >
+              <img
+                src="/heritage/clipping-meet-buddy-marchant.webp"
+                width="941"
+                height="1672"
+                alt="Newspaper profile: Meet Buddy Marchant"
+              />
+            </button>
+            <figcaption>Click to enlarge and read the fine print.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2 class="section">How it lines up</h2>
+        <div class="timeline">
+          <div>
+            <p class="year">1950</p>
+            <p>
+              R. L. Davenport is operating markets and groceries in Dallas County — eventually three
+              stores in Oak Cliff.
+            </p>
+          </div>
+          <div>
+            <p class="year">1952–53</p>
+            <p>
+              Buddy Marchant, high-school ROTC: Best Dressed Cadet, and the Best Non-Commissioned
+              Officer Award the year after. Then a clerk and stockboy job at Davenport Grocery.
+            </p>
+          </div>
+          <div>
+            <p class="year">1962</p>
+            <p>
+              Davenport sells the Oak Cliff stores and comes to Carrollton. Gene Kidd joins the food
+              store the same year.
+            </p>
+          </div>
+          <div>
+            <p class="year">Jan 1964</p>
+            <p>Buddy is made manager of the Busy Bee on Lake June Road in Dallas.</p>
+          </div>
+          <div>
+            <p class="year">1965</p>
+            <p>A year later, Carrollton's Busy Bee. Father-in-law and son-in-law, same store.</p>
+          </div>
+          <div>
+            <p class="year">Mar 1970</p>
+            <p>
+              The Progress Edition puts the Busy Bee Thrif-Tee Food Store on the front of the
+              section: five butchers, a butcherette, and Choice and U.S. Good meats cut to suit the
+              customer.
+            </p>
+          </div>
+          <div>
+            <p class="year">Early 1980s</p>
+            <p>
+              My father and uncle sell the store to a third party. My brother and I had worked there
+              by then. My parents open a business of their own next.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="on-white">
+      <div class="wrap">
+        <h2 class="section" style="max-width: 24ch">My first job, and my brother's too</h2>
+        <div class="grid split">
+          <div>
+            <p class="body-copy">
+              The Busy Bee was where I started working, and where my older brother started before
+              me. I worked every part of that store except the butcher shop — he took that side of
+              it and learned the ropes cutting meat.
+            </p>
+            <p class="body-copy">
+              I learned to drive riding to the store with my grandfather. I found out what a long
+              hard day actually is. I saw what values and a work ethic look like: my dad was doing
+              the job, and there was nobody there to do it for him. And more than any of it, I
+              learned that taking care of the customer is the job — not a slogan hung above the job.
+            </p>
+          </div>
+          <div class="aside">
+            <p class="kicker">Early 1980s</p>
+            <h3>How the family part ended</h3>
+            <p>
+              My father and my uncle sold the Busy Bee to a third party. That closed out the era of
+              it being a family business.
+            </p>
+            <p>
+              It didn't close out the entrepreneurship. My father and mother went and opened a
+              business together instead.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2 class="section" style="margin-bottom: 20px; max-width: 22ch">
+          What the store put in the app
+        </h2>
+        <p class="lede">
+          “We try to please the customer as much as possible.” That is what my father told the
+          paper, and it is the whole brief. A shopping list app is a small thing next to a meat
+          counter, but the standard transfers.
+        </p>
+        <div class="grid values">
+          <div class="card">
+            <h3>Cut to suit the customer</h3>
+            <p>
+              Your list is grouped by your stores and your aisles, not by somebody's idea of a tidy
+              database.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Nobody hands you a form</h3>
+            <p>
+              No password to remember, no app store, nothing to download. You open it and it works.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Open when you need it</h3>
+            <p>
+              It keeps running in the back corner of the freezer aisle with no signal at all, and
+              catches up later.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-band">
+      <div class="wrap">
+        <h2>For Dad and Granddad (Pawpaw), who kept the list in their heads.</h2>
+        <p>
+          Busy Bee Grocer is free, and it's named after their store. If you have a photograph of the
+          Busy Bee, or you shopped there, I would like to hear about it.
+        </p>
+        <div class="pills">
+          <a class="pill white" href="/app/">Open Busy Bee Grocer</a>
+          <a class="pill ghost" href="/">Back to the home page</a>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="wrap">
+        <p>
+          <a href="/app/">Open the app</a> ·
+          <a href="/app/privacy">Privacy</a>
+        </p>
+        <p>Made for one household, shared with anyone who wants it.</p>
+      </div>
+    </footer>
+
+    <dialog id="lightbox">
+      <img alt="" />
+      <button class="close" type="button">Close</button>
+    </dialog>
+
+    <script>
+      // The two clipping scans open full-screen so the fine print can be read.
+      // Both share one <dialog>; the button carries the source, alt text and the
+      // width that suits that particular scan.
+      ;(function () {
+        var dialog = document.getElementById('lightbox')
+        var img = dialog.querySelector('img')
+
+        document.querySelectorAll('button.zoom').forEach(function (button) {
+          button.addEventListener('click', function () {
+            img.src = button.dataset.zoom
+            img.alt = button.dataset.zoomAlt
+            dialog.style.setProperty('--zoom-width', button.dataset.zoomWidth)
+            dialog.showModal()
+          })
+        })
+
+        // Clicking the darkened area closes it; clicking the scan itself does
+        // not, so a stray click while reading doesn't dismiss the page.
+        dialog.addEventListener('click', function (event) {
+          if (event.target !== img) dialog.close()
+        })
+
+        // Escape is handled by <dialog> itself. Dropping the src on close stops
+        // the previous scan flashing up behind the next one.
+        dialog.addEventListener('close', function () {
+          img.removeAttribute('src')
+        })
+      })()
+    </script>
+  </body>
+</html>
