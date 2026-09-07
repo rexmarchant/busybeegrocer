@@ -1,3 +1,10 @@
+# [2.11.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.10.0...v2.11.0) (2026-09-07)
+
+
+### Features
+
+* read the story of the grocery store the app is named after ([c7c3917](https://github.com/rexmarchant/busybeegrocer/commit/c7c391701ccf0a28dc05d75c39844a56a9fbac0a))
+
 # [2.10.0](https://github.com/rexmarchant/busybeegrocer/compare/v2.9.0...v2.10.0) (2026-08-25)
 
 
